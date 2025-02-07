@@ -13,9 +13,9 @@
 #    define LMP_NUCC_CLUSTER_MAX_SIZE 300
 #    define LMP_NUCC_CLUSTER_MAX_GHOST 300
 
-// #define __NUCC_CSPAN_CHECK_ACCESS
-// #define __NUCC_CHECK_ACCESS
-// #define __NUCC_CSPAN_DEBUG_CALLS
+#define __NUCC_CSPAN_CHECK_ACCESS
+#define __NUCC_CHECK_ACCESS
+#define __NUCC_CSPAN_DEBUG_CALLS
 
 namespace NUCC {
 
