@@ -141,6 +141,9 @@ void ComputeClusterSizeExt::init()
     clusters.grow(memory, nloc, "size/cluster/ext:clusters");
     ns.grow(memory, 2 * nloc, "size/cluster/ext:ns");
     monomers.grow(memory, nloc, "size/cluster/ext:monomers");
+    clusters.reset();
+    ns.reset();
+    monomers.reset();
   }
 
   if (ns.empty() || clusters.empty() || monomers.empty()) { error->one(FLERR, "{}: Inconsistent arrays state", style); }
@@ -148,11 +151,13 @@ void ComputeClusterSizeExt::init()
   if ((gathered.empty()) || (natom_loc < atom->natoms)) {
     natom_loc = static_cast<bigint>(static_cast<long double>(atom->natoms) * LMP_NUCC_ALLOC_COEFF);
     gathered.grow(memory, natom_loc, "size/cluster/ext:gathered");
+    gathered.reset();
   }
 
   if ((peratom_size.empty()) || (nloc_peratom < atom->nlocal)) {
     nloc_peratom = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
     peratom_size.grow(memory, nloc_peratom, "size/cluster/ext:peratom");
+    peratom_size.reset();
     vector_atom = peratom_size.data();
   }
 
@@ -246,6 +251,7 @@ void ComputeClusterSizeExt::compute_vector()
   if (tcon > natom_loc) {
     natom_loc = static_cast<int>(tcon * LMP_NUCC_ALLOC_COEFF);
     gathered.grow(memory, natom_loc, "gathered");
+    gathered.reset();
   }
 
   // communicate about local cluster sizes
