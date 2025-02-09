@@ -219,7 +219,11 @@ void ComputeClusterSizeExt::compute_vector()
       }
       // possible segfault if actual cluster size exceeds LMP_NUCC_CLUSTER_MAX_SIZE + LMP_NUCC_CLUSTER_MAX_GHOST
       const int clidx = cmap[clid];
-      clusters[clidx].atoms<false>()[ns[clidx].sz++] = i;
+      if (ns[clidx].sz < LMP_NUCC_CLUSTER_MAX_SIZE) {
+        clusters[clidx].atoms<false>()[ns[clidx].sz++] = i;
+      } else {
+        error->warning(FLERR, "{}: Cluster size exceeds max size", style);
+      }
     }
   }
   for (const auto& [clid, clidx] : cmap) {
