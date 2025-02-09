@@ -198,6 +198,22 @@ class cspan {
     if (!span_.empty()) { std::fill_n(span_.data(), span_.size(), zero_value<T>()); }
   }
 
+  template<typename U>
+  inline void reset_unsafe(const U& value)
+    requires(!std::is_const_v<T>)
+  {
+    static_assert(sizeof(T) % sizeof(U) == 0, "Object size is not multiple of target value size");
+    if (!span_.empty()) { std::fill(reinterpret_cast<U*>(span_.data()), reinterpret_cast<U*>(span_.data() + span_.size()), value); }
+  }
+
+  template<typename U>
+  inline void reset_unsafe(U&& value)
+    requires(!std::is_const_v<T>)
+  {
+    static_assert(sizeof(T) % sizeof(U) == 0, "Object size is not multiple of target value size");
+    if (!span_.empty()) { std::fill(reinterpret_cast<std::remove_const_t<U>*>(span_.data()), reinterpret_cast<std::remove_const_t<U>*>(span_.data() + span_.size()), value); }
+  }
+
   inline constexpr std::size_t memory_usage() const noexcept { return size() * sizeof(T) + sizeof(std::size_t) + sizeof(T *); }
 
  private:

@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstring>
 #include <utility>
+#include <algorithm>
 
 using namespace LAMMPS_NS;
 using namespace NUCC;
@@ -141,9 +142,12 @@ void ComputeClusterSizeExt::init()
     clusters.grow(memory, nloc, "size/cluster/ext:clusters");
     ns.grow(memory, 2 * nloc, "size/cluster/ext:ns");
     monomers.grow(memory, nloc, "size/cluster/ext:monomers");
-    clusters.reset();
-    ns.reset();
     monomers.reset();
+    ns.reset_unsafe<int>(0);
+    // clusters.reset();
+    for (int i = 0; i < nloc; ++i) {
+      clusters[i] = cluster_data();
+    }
   }
 
   if (ns.empty() || clusters.empty() || monomers.empty()) { error->one(FLERR, "{}: Inconsistent arrays state", style); }
@@ -151,7 +155,9 @@ void ComputeClusterSizeExt::init()
   if ((gathered.empty()) || (natom_loc < atom->natoms)) {
     natom_loc = static_cast<bigint>(static_cast<long double>(atom->natoms) * LMP_NUCC_ALLOC_COEFF);
     gathered.grow(memory, natom_loc, "size/cluster/ext:gathered");
-    gathered.reset();
+    // gathered.reset();
+    gathered.reset_unsafe<int>(0);
+    // for (int i = 0; i < natom_loc; ++i) { gathered[i] = cldata(); }
   }
 
   if ((peratom_size.empty()) || (nloc_peratom < atom->nlocal)) {
@@ -192,6 +198,12 @@ void ComputeClusterSizeExt::compute_vector()
     clusters.grow(memory, nloc, "size/cluster/ext:clusters");
     ns.grow(memory, 2 * nloc, "size/cluster/ext:ns");
     monomers.grow(memory, nloc, "size/cluster/ext:monomers");
+    monomers.reset();
+    ns.reset_unsafe<int>(0);
+    // clusters.reset();
+    for (int i = 0; i < nloc; ++i) {
+      clusters[i] = cluster_data();
+    }
   }
 
   // Sort atom IDs by cluster IDs
@@ -251,7 +263,8 @@ void ComputeClusterSizeExt::compute_vector()
   if (tcon > natom_loc) {
     natom_loc = static_cast<int>(tcon * LMP_NUCC_ALLOC_COEFF);
     gathered.grow(memory, natom_loc, "gathered");
-    gathered.reset();
+    // gathered.reset();
+    gathered.reset_unsafe<int>(0);
   }
 
   // communicate about local cluster sizes
@@ -276,6 +289,7 @@ void ComputeClusterSizeExt::compute_vector()
   if (nloc_peratom < atom->nlocal) {
     nloc_peratom = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
     peratom_size.grow(memory, nloc_peratom, "size/cluster/ext:peratom");
+    peratom_size.reset();
     peratom_size.reset();
     vector_atom = peratom_size.data();
   }

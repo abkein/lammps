@@ -6,6 +6,7 @@
 namespace NUCC {
 
 struct cluster_data {
+  cluster_data() {}
   explicit cluster_data(const int _clid) : clid(_clid) {}
 
   // void rearrange() noexcept { ::memcpy(_atoms + l_size, _ghost, nghost * sizeof(int)); }
