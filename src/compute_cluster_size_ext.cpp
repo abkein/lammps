@@ -144,7 +144,6 @@ void ComputeClusterSizeExt::init()
     monomers.grow(memory, nloc, "size/cluster/ext:monomers");
     monomers.reset();
     ns.reset_unsafe<int>(0);
-    // clusters.reset();
     for (int i = 0; i < nloc; ++i) {
       clusters[i] = cluster_data();
     }
@@ -155,9 +154,7 @@ void ComputeClusterSizeExt::init()
   if ((gathered.empty()) || (natom_loc < atom->natoms)) {
     natom_loc = static_cast<bigint>(static_cast<long double>(atom->natoms) * LMP_NUCC_ALLOC_COEFF);
     gathered.grow(memory, natom_loc, "size/cluster/ext:gathered");
-    // gathered.reset();
     gathered.reset_unsafe<int>(0);
-    // for (int i = 0; i < natom_loc; ++i) { gathered[i] = cldata(); }
   }
 
   if ((peratom_size.empty()) || (nloc_peratom < atom->nlocal)) {
@@ -200,7 +197,6 @@ void ComputeClusterSizeExt::compute_vector()
     monomers.grow(memory, nloc, "size/cluster/ext:monomers");
     monomers.reset();
     ns.reset_unsafe<int>(0);
-    // clusters.reset();
     for (int i = 0; i < nloc; ++i) {
       clusters[i] = cluster_data();
     }
@@ -267,7 +263,6 @@ void ComputeClusterSizeExt::compute_vector()
   if (tcon > natom_loc) {
     natom_loc = static_cast<int>(tcon * LMP_NUCC_ALLOC_COEFF);
     gathered.grow(memory, natom_loc, "gathered");
-    // gathered.reset();
     gathered.reset_unsafe<int>(0);
   }
 

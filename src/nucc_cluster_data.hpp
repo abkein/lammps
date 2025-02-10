@@ -6,8 +6,15 @@
 namespace NUCC {
 
 struct cluster_data {
-  cluster_data() {}
-  explicit cluster_data(const int _clid) : clid(_clid) {}
+  cluster_data(): clid(0), l_size(0), g_size(0), host(-1), nhost(0), nowners(0) {
+    std::fill_n(_owners, LMP_NUCC_CLUSTER_MAX_OWNERS, 0);
+    std::fill_n(_atoms, LMP_NUCC_CLUSTER_MAX_SIZE, 0);
+  }
+
+  explicit cluster_data(const int _clid): clid(_clid), l_size(0), g_size(0), host(-1), nhost(0), nowners(0) {
+    std::fill_n(_owners, LMP_NUCC_CLUSTER_MAX_OWNERS, 0);
+    std::fill_n(_atoms, LMP_NUCC_CLUSTER_MAX_SIZE, 0);
+  }
 
   // void rearrange() noexcept { ::memcpy(_atoms + l_size, _ghost, nghost * sizeof(int)); }
 
