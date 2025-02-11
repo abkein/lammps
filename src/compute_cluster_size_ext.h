@@ -36,6 +36,8 @@ ComputeStyle(size/cluster/ext,ComputeClusterSizeExt);
 
 namespace NUCC {
   struct cldata {
+    cldata() = default;
+    cldata(int id, int sz): id(id), sz(sz) {}
     int id = 0;
     int sz = 0;
   };
@@ -100,7 +102,7 @@ class ComputeClusterSizeExt : public Compute {
 
   Compute *compute_cluster_atom = nullptr;
 
-  MPI_Datatype MPI_CLDATA;
+  // MPI_Datatype MPI_CLDATA;
 };
 
 }    // namespace LAMMPS_NS

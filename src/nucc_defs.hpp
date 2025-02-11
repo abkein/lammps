@@ -13,17 +13,17 @@
 #    define LMP_NUCC_CLUSTER_MAX_SIZE 300
 #    define LMP_NUCC_CLUSTER_MAX_GHOST 300
 
-#define __NUCC_CSPAN_CHECK_ACCESS
-#define __NUCC_CHECK_ACCESS
-#define __NUCC_CSPAN_DEBUG_CALLS
+// #define __NUCC_CSPAN_CHECK_ACCESS
+// #define __NUCC_CHECK_ACCESS
+// #define __NUCC_CSPAN_DEBUG_CALLS
 
 namespace NUCC {
 
-template <typename A>
-using VecAlloc_t = CustomAllocator<A>;
+// template <typename A>
+// using VecAlloc_t = CustomAllocator<A>;
 
-template <typename A>
-using Vec_t = std::vector<A, std::scoped_allocator_adaptor<VecAlloc_t<A>>>;
+// template <typename A>
+// using Vec_t = std::vector<A, std::scoped_allocator_adaptor<VecAlloc_t<A>>>;
 
 // template <typename A, typename B>
 // using MapMember_t = std::pair<const A, B>;

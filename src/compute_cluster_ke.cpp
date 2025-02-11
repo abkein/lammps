@@ -16,6 +16,7 @@
 #include "compute_cluster_ke.h"
 #include "compute_cluster_size_ext.h"
 #include "nucc_cspan.hpp"
+#include "nucc_defs.hpp"
 
 #include "atom.h"
 #include "comm.h"
@@ -143,8 +144,22 @@ void ComputeClusterKE::compute_local()
     const auto& clstr = clusters[clidx];
     const auto& atoms = clstr.atoms();
     if (clstr.g_size < size_cutoff) {
-      for (int j = 0; j < clstr.l_size; ++j) {
-        local_kes[clstr.g_size] += peratomkes[atoms[j]];
+      for (int i = 0; i < clstr.l_size; ++i) {
+        #ifdef __NUCC_CHECK_ACCESS
+        if (atoms[i] > atom->nlocal) {
+          if (comm->me == 0) {
+            utils::logmesg(lmp, "Cluster: {}\n", clid);
+            utils::logmesg(lmp, "l_size: {}, g_size: {}\n", clstr.l_size, clstr.g_size);
+            utils::logmesg(lmp, "Atoms:\n");
+            for (int j = 0; j < clstr.l_size; ++j) {
+              utils::logmesg(lmp, "{} ", atoms[j]);
+            }
+            utils::logmesg(lmp, "\n");
+          }
+          error->one(FLERR, "{}: {}: Atom indice exceeds nlocal", style, update->ntimestep);
+        }
+        #endif // __NUCC_CHECK_ACCESS
+        local_kes[clstr.g_size] += peratomkes[atoms[i]];
       }
     }
   }
