@@ -21,7 +21,7 @@
         (python3.withPackages (ps: with ps; [
           ipykernel
           pip
-          bash_kernel
+          bash-kernel
           ipython
           ipykernel
           jupyter
