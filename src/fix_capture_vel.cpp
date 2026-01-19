@@ -8,7 +8,6 @@
 // TODO: NUCC FILE
 
 #include "fix_capture_vel.h"
-#include "fmt/base.h"
 #include "compute.h"
 #include "random_park.h"
 #include "region.h"

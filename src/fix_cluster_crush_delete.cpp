@@ -22,7 +22,6 @@
 #include "domain.h"
 #include "error.h"
 #include "fix.h"
-#include "fmt/base.h"
 #include "group.h"
 #include "input.h"
 #include "irregular.h"
@@ -646,7 +645,7 @@ bool FixClusterCrushDelete::check_overlap(const double* const coord) const noexc
     double delx = coord[0] - x[i][0];
     double dely = coord[1] - x[i][1];
     double delz = coord[2] - x[i][2];
-    domain->minimum_image(delx, dely, delz);
+    domain->minimum_image(FLERR, delx, dely, delz);
     double rsq = delx * delx + dely * dely + delz * delz;
     if (rsq < overlapsq) {
       flag = 1;

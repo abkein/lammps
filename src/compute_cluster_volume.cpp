@@ -315,7 +315,7 @@ void ComputeClusterVolume::compute_local()
       }
     }
   } else {
-    // comliant
+    // compliant
   }
 
   // ::MPI_Allgather(send_comm_matrix_local, comm->nprocs, MPI_INT, send_comm_matrix_global, comm->nprocs, MPI_INT, world);

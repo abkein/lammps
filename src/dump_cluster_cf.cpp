@@ -11,7 +11,6 @@
 #include "comm.h"
 #include "compute.h"
 #include "error.h"
-#include "fmt/base.h"
 #include "memory.h"
 #include "modify.h"
 #include "update.h"

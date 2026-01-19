@@ -12,7 +12,6 @@
 #include "compute.h"
 #include "compute_cluster_size_ext.h"
 #include "error.h"
-#include "fmt/base.h"
 #include "memory.h"
 #include "modify.h"
 #include "update.h"
