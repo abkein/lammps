@@ -110,6 +110,7 @@ Dump::Dump(LAMMPS *lmp, int /*narg*/, char **arg) :
   compressed = 0;
   binary = 0;
   multifile = 0;
+  multifile_override = 0;
   size_one = 0;
 
   multiproc = 0;
@@ -476,7 +477,8 @@ void Dump::write()
   // ping each proc in my cluster, receive its data, write data to file
   // else wait for ping from fileproc, send my data to fileproc
 
-  int tmp,nlines,nchars;
+  int tmp = 0;
+  int nlines,nchars;
   MPI_Status status;
   MPI_Request request;
 
@@ -869,7 +871,7 @@ int Dump::idcompare(const int i, const int j, void *ptr)
 
 int Dump::bufcompare(const int i, const int j, void *ptr)
 {
-  auto dptr = (Dump *) ptr;
+  auto *dptr = (Dump *) ptr;
   double *bufsort     = dptr->bufsort;
   const int size_one  = dptr->size_one;
   const int sortcolm1 = dptr->sortcolm1;
@@ -890,7 +892,7 @@ int Dump::bufcompare(const int i, const int j, void *ptr)
 
 int Dump::bufcompare_reverse(const int i, const int j, void *ptr)
 {
-  auto dptr = (Dump *) ptr;
+  auto *dptr = (Dump *) ptr;
   double *bufsort     = dptr->bufsort;
   const int size_one  = dptr->size_one;
   const int sortcolm1 = dptr->sortcolm1;
@@ -966,7 +968,7 @@ void Dump::balance()
   // post recvs first
 
   int nswap = 0;
-  auto request = new MPI_Request[nprocs];
+  auto *request = new MPI_Request[nprocs];
 
   // find which proc starting atom belongs to
 

@@ -60,6 +60,7 @@ Compute::Compute(LAMMPS *lmp, int narg, char **arg) :
   // set child class defaults
 
   scalar_flag = vector_flag = array_flag = 0;
+  thermo_modify_colname = 0;
   extscalar = extvector = extarray = -1;
   peratom_flag = local_flag = pergrid_flag = 0;
   size_vector_variable = size_array_rows_variable = 0;
@@ -165,7 +166,7 @@ void Compute::modify_params(int narg, char **arg)
 void Compute::adjust_dof_fix()
 {
   fix_dof = 0;
-  for (auto &ifix : modify->get_fix_list())
+  for (const auto &ifix : modify->get_fix_list())
     if (ifix->dof_flag)
       fix_dof += ifix->dof(igroup);
 }

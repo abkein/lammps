@@ -49,17 +49,27 @@ atoms of the other given atom types.  The specified scaling temperature
 *T* is used in the Metropolis criterion dictating swap probabilities.
 
 Perform *X* swaps of atoms of one type with atoms of another type
-according to a Monte Carlo probability. Swap candidates must be in the
-fix group, must be in the region (if specified), and must be of one of
-the listed types. Swaps are attempted between candidates that are chosen
-randomly with equal probability among the candidate atoms. Swaps are not
-attempted between atoms of the same type since nothing would happen.
+according to a Monte Carlo probability.  Swap candidates must be in
+the fix group, must be in the region (if specified), and must be of
+one of the listed types. Swaps are attempted between candidates that
+are chosen randomly with equal probability among the candidate
+atoms. Swaps are not attempted between atoms of the same type since
+nothing would happen.
 
-All atoms in the simulation domain can be moved using regular time
-integration displacements (e.g., via :doc:`fix nvt <fix_nh>`), resulting
-in a hybrid MC+MD simulation. A smaller-than-usual timestep size may be
-needed when running such a hybrid simulation, especially if the swapped
-atoms are not well equilibrated.
+All atoms in the simulation domain can also be moved using regular
+time integration displacements (e.g., via :doc:`fix nvt <fix_nh>`),
+resulting in a hybrid MC+MD simulation, where $X$ MC swap attempts are
+made once every $N$ MD steps.  A smaller-than-usual timestep size may
+be needed when running such a hybrid simulation, especially if the
+swapped atoms are not well equilibrated.
+
+.. note::
+
+   To run an MC-only simulation (no MD), you should define no
+   time-integration fix, set the :doc:`thermo <thermo>` command to 1,
+   set *N* to 1, and set *X* small enough to see the MC evolution of
+   the system.  But if *X* is too small, the overhead at the start and
+   stop of MC moves each timestep will slow down the simulation.
 
 The *types* keyword is required. At least two atom types must be
 specified. If not using *semi-grand*, exactly two atom types are
@@ -116,7 +126,10 @@ charge would not be conserved. As a consequence, no checks on atomic
 charges are performed, and successful switches update the atom type but
 not the atom charge. While it is possible to use *semi-grand* with
 groups of atoms that have different charges, these charges will not be
-changed when the atom types change.
+changed when the atom types change.  The same applies for systems
+with per-atom masses: non *semi-grand* will swap atom masses, but
+the masses have to be the same each for the atom types.  When using
+*semi-grand* no per-atom masses are changed.
 
 Since this fix computes total potential energies before and after
 proposed swaps, even complicated potential energy calculations are
@@ -184,11 +197,10 @@ When this fix is used with a :doc:`hybrid pair style <pair_hybrid>`
 system, only swaps between atom types of the same sub-style (or
 combination of sub-styles) are permitted.
 
-This fix cannot be used with systems that do not have per-type masses
-(e.g. atom style sphere) since the implemented algorithm pre-computes
-velocity rescaling factors from per-type masses and ignores any per-atom
-masses, if present.  In case both, per-type and per-atom masses are
-present, a warning is printed.
+This fix can be used with systems that have per-atom masses
+(e.g. atom style sphere) provided all atoms of the types handled
+by this fix have the same mass per type. The fix will check for that.
+In case both, per-type and per-atom masses are present, a warning is printed.
 
 Related commands
 """"""""""""""""

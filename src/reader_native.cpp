@@ -254,6 +254,10 @@ bigint ReaderNative::read_header(double box[3][3], int &boxinfo, int &triclinic,
     triclinic = 0;
     box[0][2] = box[1][2] = box[2][2] = 0.0;
     read_lines(1);
+    if (utils::strmatch(line,"ITEM: BOX BOUNDS.*abc\\s+origin")) {
+      error->one(FLERR, Error::NOLASTLINE,
+                 "Dump files in general triclinic format are not (yet) supported");
+    }
     if (utils::strmatch(line,"ITEM: BOX BOUNDS.*xy\\s+xz\\s+yz")) triclinic = 1;
 
     try {
@@ -413,12 +417,18 @@ bigint ReaderNative::read_header(double box[3][3], int &boxinfo, int &triclinic,
     else if (fieldtype[i] == Q)
       fieldindex[i] = find_label("q", labels);
 
+    else if (fieldtype[i] == MOL)
+      fieldindex[i] = find_label("mol", labels);
+
     else if (fieldtype[i] == IX)
       fieldindex[i] = find_label("ix", labels);
     else if (fieldtype[i] == IY)
       fieldindex[i] = find_label("iy", labels);
     else if (fieldtype[i] == IZ)
       fieldindex[i] = find_label("iz", labels);
+
+    else if (fieldtype[i] == APIP_LAMBDA)
+      fieldindex[i] = find_label("apip_lambda", labels);
   }
 
   // set fieldflag = -1 if any unfound fields
@@ -524,7 +534,7 @@ void ReaderNative::read_buf(void * ptr, size_t size, size_t count)
 std::string ReaderNative::read_binary_str(size_t size)
 {
   std::string str(size, '\0');
-  read_buf(&str[0], sizeof(char), size);
+  read_buf((char *)str.data(), sizeof(char), size);
   return str;
 }
 
