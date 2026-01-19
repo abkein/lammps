@@ -85,8 +85,8 @@ ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) 
   cIDs_by_size_all.reserve(size_cutoff);
 
 
-  MPI_Datatype type[2] = {MPI_INT, MPI_INT};
-  int blocklen[2] = {1, 1};
+  // MPI_Datatype type[2] = {MPI_INT, MPI_INT};
+  // int blocklen[2] = {1, 1};
   MPI_Aint disp[2];
 
   // Calculate displacements
@@ -302,7 +302,7 @@ void ComputeClusterSizeExt::compute_vector()
 
   for (const auto& [clid, clidx] : cmap) {
     cluster_data& clstr = clusters[clidx];
-    const auto clatoms = clstr.atoms();
+    // const auto clatoms = clstr.atoms();
     // for (int i = 0; i < clstr.l_size; ++i) {
     //   if (clatoms[i] >= atom->nlocal) { error->one(FLERR, "{}/compute_vector_3:{}: particle index exceeds nlocal", style, comm->me); }
     // }

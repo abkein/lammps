@@ -8,6 +8,7 @@
 #include <memory>
 #include <type_traits>
 #include <vector>
+#include <numeric>
 
 namespace NUCC {
 
@@ -29,8 +30,8 @@ class MemoryKeeper {
   MemoryKeeper& operator=(const MemoryKeeper&) = delete;
   MemoryKeeper& operator=(MemoryKeeper&&)      = delete;
 
-  MemoryKeeper(LAMMPS_NS::Memory* memory) noexcept : memory_(memory) {}
-  ~MemoryKeeper() noexcept(noexcept(clear())) { clear(); }
+  explicit MemoryKeeper(LAMMPS_NS::Memory* memory) noexcept: memory_(memory) {}
+  ~MemoryKeeper() { clear(); }
 
   template <typename T>
   void store(T*& ptr, const size_t size) noexcept(noexcept(std::declval<std::vector<std::pair<char*, std::size_t>>>().emplace_back(ptr, size)))
@@ -79,11 +80,10 @@ class MemoryKeeper {
   }
 
   std::size_t memory_usage() {
-    std::size_t sum = 0;
-    for (const auto& pair : infos) {
-      sum += pair.second;
-    }
-    return sum;
+    return std::accumulate(
+      infos.begin(), infos.end(), std::size_t{0},
+      [](std::size_t acc, const auto& pair) { return acc + pair.second; }
+    );
   }
 
  private:
@@ -108,7 +108,7 @@ class CustomAllocator {
 
   CustomAllocator() = delete;
 
-  constexpr CustomAllocator(MemoryKeeper* const keeper) noexcept : keeper_(keeper) {}
+  constexpr explicit CustomAllocator(MemoryKeeper* const keeper) noexcept : keeper_(keeper) {}
 
   template <typename U>
   constexpr CustomAllocator(const CustomAllocator<U>& other) noexcept : keeper_(other.keeper_)
