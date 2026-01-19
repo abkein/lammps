@@ -36,6 +36,9 @@
           matplotlib
 
           adios2
+
+          # linters
+          lizard
         ]))
 
         openmpi
@@ -44,6 +47,11 @@
         blas
         lapack
         zstd
+
+        # linters
+        flawfinder
+        cppcheck
+        clang
       ];
     };
   };
