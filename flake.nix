@@ -17,6 +17,7 @@
         pkg-config
         gcc
         gdb
+        gfortran
 
         (python3.withPackages (ps: with ps; [
           ipykernel
@@ -33,9 +34,16 @@
           scipy
           requests
           matplotlib
+
+          adios2
         ]))
 
         openmpi
+        adios2
+        zlib
+        blas
+        lapack
+        zstd
       ];
     };
   };
