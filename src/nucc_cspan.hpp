@@ -50,7 +50,7 @@ class cspan {
   constexpr cspan(T *ptr, std::size_t n) noexcept : span_(std::span<T, Extent>(ptr, n)) {}
   constexpr cspan(T *begin, T *end) noexcept : span_(std::span<T, Extent>(begin, end)) {}
   constexpr cspan(std::span<T, Extent> &&span) noexcept : span_(span) {}
-  constexpr cspan(cspan<T, Extent> &&other) noexcept : span_(std::move(other.span)) {}
+  constexpr cspan(cspan<T, Extent> &&other) noexcept : span_(std::move(other.span_)) {}
   template <typename U, std::size_t OtherExtent>
     requires(std::is_convertible_v<U (*)[], T (*)[]>)
   constexpr cspan(const cspan<U, OtherExtent> &other) noexcept : span_(other.data(), other.size())
@@ -63,7 +63,7 @@ class cspan {
   }
   inline constexpr cspan<T, Extent> &operator=(cspan<T, Extent> &&other) noexcept
   {
-    span_ = std::move(other.span);
+    span_ = std::move(other.span_);
     return *this;
   }
 
