@@ -66,3 +66,4 @@ src/Makefile.package.settings-e
 .aider*
 .env
 .trash
+shell.nix
