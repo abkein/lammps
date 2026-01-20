@@ -18,6 +18,9 @@
         gcc
         gdb
         gfortran
+        clang
+        lldb
+        flang
 
         (python3.withPackages (ps: with ps; [
           ipykernel
@@ -51,7 +54,6 @@
         # linters
         flawfinder
         cppcheck
-        clang
       ];
     };
   };
