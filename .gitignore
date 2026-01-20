@@ -68,3 +68,4 @@ src/Makefile.package.settings-e
 .trash
 .direnv
 .envrc
+.cache
