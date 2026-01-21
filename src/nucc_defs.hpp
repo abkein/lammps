@@ -14,8 +14,11 @@
 #    define LMP_NUCC_CLUSTER_MAX_GHOST 300
 
 // #define __NUCC_CSPAN_CHECK_ACCESS
-// #define __NUCC_CHECK_ACCESS
 // #define __NUCC_CSPAN_DEBUG_CALLS
+// #define __NUCC_CHECK_ACCESS
+// #define __NUCC_ALGO_CHECK
+// #define __NUCC_NEIGHS_RADIAL_USE_HALF
+// #define __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
 
 namespace NUCC {
 
