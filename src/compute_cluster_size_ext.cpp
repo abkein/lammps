@@ -178,13 +178,6 @@ void ComputeClusterSizeExt::compute_vector()
   dist_local.reset();
   dist.reset();
 
-  if (nloc_peratom < atom->nlocal) {
-    nloc_peratom = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
-    peratom_size.grow(memory, nloc_peratom, "size/cluster/ext:peratom");
-    peratom_size.reset();
-    vector_atom = peratom_size.data();
-  }
-
   if (nloc < atom->nlocal) {
     nloc = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
     cluster_map.reserve(nloc);
@@ -345,23 +338,36 @@ void ComputeClusterSizeExt::compute_peratom()
   invoked_peratom = update->ntimestep;
 
   if (invoked_vector != update->ntimestep) { compute_vector(); }
+
+  if (nloc_peratom < atom->nlocal) {
+    nloc_peratom = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
+    peratom_size.grow(memory, nloc_peratom, "size/cluster/ext:peratom");
+    peratom_size.reset();
+    vector_atom = peratom_size.data();
+  }
+
+  for (const auto& [clid, clidx] : cluster_map) {
+    const cluster_data& clstr = clusters[clidx];
+    const auto cluster_atoms = clstr.atoms();
+    for (int i = 0; i < clstr.l_size; ++i) { peratom_size[cluster_atoms[i]] = clstr.l_size; }
+  }
 }
 
 /* ----------------------------------------------------------------------
    memory usage of maps and dist
 ------------------------------------------------------------------------- */
 
-double ComputeClusterSizeExt::memory_usage()
-{
-  std::size_t sum = dist.memory_usage() + dist_local.memory_usage();
-  sum += counts_global.memory_usage() + displs.memory_usage();
-  sum += clusters.memory_usage();
-  sum += ns.memory_usage() + gathered.memory_usage();
-  sum += monomers.memory_usage();
-  // sum += keeper1->memory_usage();
-  // sum += keeper2->memory_usage();
-  // sum += keeper3->memory_usage();
-  return static_cast<double>(sum);
-}
+    double ComputeClusterSizeExt::memory_usage()
+    {
+      std::size_t sum = dist.memory_usage() + dist_local.memory_usage();
+      sum += counts_global.memory_usage() + displs.memory_usage();
+      sum += clusters.memory_usage();
+      sum += ns.memory_usage() + gathered.memory_usage();
+      sum += monomers.memory_usage();
+      // sum += keeper1->memory_usage();
+      // sum += keeper2->memory_usage();
+      // sum += keeper3->memory_usage();
+      return static_cast<double>(sum);
+    }
 
-/* ---------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------- */
