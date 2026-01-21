@@ -24,19 +24,16 @@
 #include "fix.h"
 #include "group.h"
 #include "input.h"
-#include "irregular.h"
 #include "lattice.h"
-#include "memory.h"
 #include "modify.h"
 #include "random_park.h"
 #include "region.h"
 #include "update.h"
 #include "variable.h"
-#include "tim.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <algorithm>
 #include <unordered_map>
 
 using namespace LAMMPS_NS;
@@ -48,8 +45,8 @@ constexpr int DEFAULT_MAXTRY = 1000;
 
 FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) : Fix(lmp, narg, arg)
 {
-  restart_pbc          = 1;
-  nevery               = 1;
+  restart_pbc = 1;
+  nevery      = 1;
 
   if (narg < 9) { utils::missing_cmd_args(FLERR, "fix cluster/crush/delete", error); }
 
@@ -79,11 +76,11 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
 
   // Get the seed for coordinate generator
   int xseed = utils::inumeric(FLERR, arg[7], true, lmp);
-  xrandom   = new RanPark(lmp, 12345);
+  xrandom   = new RanPark(lmp, xseed);
 
   // Get the seed for coordinate generator
   int vseed = utils::inumeric(FLERR, arg[8], true, lmp);
-  vrandom   = new RanPark(lmp, xseed);
+  vrandom   = new RanPark(lmp, vseed);
 
   // Get the ntype atom creation
   ntype     = utils::inumeric(FLERR, arg[9], true, lmp);
@@ -352,7 +349,7 @@ void FixClusterCrushDelete::pre_exchange()
   next_step = update->ntimestep + nevery;
 
   if (compute_cluster_size->invoked_vector != update->ntimestep) { compute_cluster_size->compute_vector(); }
-  const auto& cIDs_by_size = compute_cluster_size->get_cIDs_by_size();
+  const auto& cIDs_by_size = compute_cluster_size->get_clid_by_size();
 
   if (nloc < atom->nlocal) {
     nloc = atom->nlocal;
@@ -406,7 +403,7 @@ void FixClusterCrushDelete::pre_exchange()
   to_insert += atoms2move_total;
   int to_insert_prev = to_insert;
 
-  int ninserted = 0;
+  int ninserted      = 0;
   if (to_insert > 0) { ninserted = add(); }
   to_insert -= ninserted;
 
@@ -417,8 +414,7 @@ void FixClusterCrushDelete::pre_exchange()
     // print status
     if (screenflag != 0) { utils::logmesg(lmp, "Crushed {} clusters -> deleted {} atoms.\n", clusters2crush_total, atoms2move_total); }
     if (fileflag != 0) {
-      fmt::print(fp, "{},{},{},{},{},{}\n", update->ntimestep, atom->natoms, clusters2crush_total, atoms2move_total, ninserted,
-                 to_insert);
+      utils::print(fp, "{},{},{},{},{},{}\n", update->ntimestep, atom->natoms, clusters2crush_total, atoms2move_total, ninserted, to_insert);
       ::fflush(fp);
     }
   }
@@ -436,7 +432,7 @@ void FixClusterCrushDelete::deleteAtoms(const int atoms2move_local) const noexce
     if (atom->nlocal < 0) { error->one(FLERR, "{}/deleteAtoms:{}: Negative nlocal", style, comm->me); }
     if (p2m[i] < 0) { error->one(FLERR, "{}/deleteAtoms:{}: particle index less than 0", style, comm->me); }
     if (p2m[i] >= atom->nlocal) { error->one(FLERR, "{}/deleteAtoms:{}: particle index exceeds nlocal", style, comm->me); }
-    atom->avec->copy(atom->nlocal-1-i, p2m[i], 1);
+    atom->avec->copy(atom->nlocal - 1 - i, p2m[i], 1);
   }
   atom->nlocal -= atoms2move_local;
 }
@@ -467,7 +463,7 @@ int FixClusterCrushDelete::add() const
     boxhi = domain->boxhi_lamda;
   }
 
-  double *sublo,*subhi;
+  double *sublo, *subhi;
   if (domain->triclinic == 0) {
     sublo = domain->sublo;
     subhi = domain->subhi;
@@ -507,7 +503,7 @@ int FixClusterCrushDelete::add() const
       const double* const newcoord = domain->triclinic != 0 ? lamda : coord;
 
       // check against box
-      bool proceed = newcoord[0] >= boxlo[0] && newcoord[0] < boxhi[0] && newcoord[1] >= boxlo[1] && newcoord[1] < boxhi[1] &&
+      bool proceed                 = newcoord[0] >= boxlo[0] && newcoord[0] < boxhi[0] && newcoord[1] >= boxlo[1] && newcoord[1] < boxhi[1] &&
           newcoord[2] >= boxlo[2] && newcoord[2] < boxhi[2];
       if (!proceed) { continue; }
 
@@ -520,9 +516,7 @@ int FixClusterCrushDelete::add() const
 
       int flagsum = 0;
       ::MPI_Allreduce(&placement_flag, &flagsum, 1, MPI_INT, MPI_SUM, world);
-      if (flagsum > 1) {
-        error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, flagsum);
-      }
+      if (flagsum > 1) { error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, flagsum); }
       if ((flagsum == 0) && (comm->me == 0)) {
         utils::logmesg(lmp, "WARNING: {}: No procs decided to insert a new atom, that seemed to be valid (seems to be a fix bug)\n", style);
       }
@@ -559,29 +553,28 @@ int FixClusterCrushDelete::add() const
 
 /* ---------------------------------------------------------------------- */
 
-int FixClusterCrushDelete::placement_check_me(const double* const newcoord, const double* const sublo, const double* const subhi, int nparticle, int nattempt) const {
+int FixClusterCrushDelete::placement_check_me(const double* const newcoord, const double* const sublo, const double* const subhi, int nparticle,
+                                              int nattempt) const
+{
   int flag = 0;
 
-  if (newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] &&
-      newcoord[1] >= sublo[1] && newcoord[1] < subhi[1] &&
-      newcoord[2] >= sublo[2] && newcoord[2] < subhi[2]) flag = 1;
+  if (newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] && newcoord[1] >= sublo[1] && newcoord[1] < subhi[1] && newcoord[2] >= sublo[2] &&
+      newcoord[2] < subhi[2])
+    flag = 1;
   else if (domain->dimension == 3 && newcoord[2] >= domain->boxhi[2]) {
     if (comm->layout != Comm::LAYOUT_TILED) {
-      if (comm->myloc[2] == comm->procgrid[2]-1 &&
-          newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] &&
-          newcoord[1] >= sublo[1] && newcoord[1] < subhi[1]) flag = 1;
+      if (comm->myloc[2] == comm->procgrid[2] - 1 && newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] && newcoord[1] >= sublo[1] &&
+          newcoord[1] < subhi[1])
+        flag = 1;
     } else {
-      if (comm->mysplit[2][1] == 1.0 &&
-          newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] &&
-          newcoord[1] >= sublo[1] && newcoord[1] < subhi[1]) flag = 1;
+      if (comm->mysplit[2][1] == 1.0 && newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] && newcoord[1] >= sublo[1] && newcoord[1] < subhi[1])
+        flag = 1;
     }
   } else if (domain->dimension == 2 && newcoord[1] >= domain->boxhi[1]) {
     if (comm->layout != Comm::LAYOUT_TILED) {
-      if (comm->myloc[1] == comm->procgrid[1]-1 &&
-          newcoord[0] >= sublo[0] && newcoord[0] < subhi[0]) flag = 1;
+      if (comm->myloc[1] == comm->procgrid[1] - 1 && newcoord[0] >= sublo[0] && newcoord[0] < subhi[0]) flag = 1;
     } else {
-      if (comm->mysplit[1][1] == 1.0 &&
-          newcoord[0] >= sublo[0] && newcoord[0] < subhi[0]) flag = 1;
+      if (comm->mysplit[1][1] == 1.0 && newcoord[0] >= sublo[0] && newcoord[0] < subhi[0]) flag = 1;
     }
   }
 
