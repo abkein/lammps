@@ -15,32 +15,26 @@
 
 #ifdef COMPUTE_CLASS
 // clang-format off
-ComputeStyle(cf/cluster,ComputeClusterCF);
+ComputeStyle(neighs/radial/cluster,ComputeClusterNeighsRadial);
 // clang-format on
 #else
 
-#ifndef LMP_COMPUTE_CLUSTER_RDF_H
-#define LMP_COMPUTE_CLUSTER_RDF_H
+#ifndef COMPUTE_NEIGHS_RADIAL_CLUSTER_H
+#define COMPUTE_NEIGHS_RADIAL_CLUSTER_H
 
-#include "compute.h"
+#include "compute_neighs_radial_base.h"
 
 namespace LAMMPS_NS {
-class ComputeClusterCF : public Compute {
+
+class ComputeClusterNeighsRadial : public ComputeClusterNeighsRadialBase {
  public:
-  ComputeClusterCF(class LAMMPS* lmp, int narg, char** arg);
-  ~ComputeClusterCF() noexcept(true) override;
-  void init() override;
-  void compute_array() override;
-  void compute_local() override;
+  ComputeClusterNeighsRadial(class LAMMPS*, int, char**);
+  void compute_peratom() override;
   double memory_usage() override;
 
  private:
-  class ComputeClusterSizeExt* compute_cluster_size = nullptr;
-  class ComputeCFAtom* compute_rdf_atom          = nullptr;
 
-  double** cf = nullptr;
-  double** cf_local = nullptr;
-  int size_cutoff;    // size of max cluster
+  Compute* compute_cluster_atom = nullptr;
 };
 
 }    // namespace LAMMPS_NS

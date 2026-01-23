@@ -17,11 +17,8 @@
 #include "compute_cluster_size_ext.h"
 #include "compute_cf_atom.h"
 
-#include "atom.h"
 #include "comm.h"
-#include "domain.h"
 #include "error.h"
-#include "group.h"
 #include "memory.h"
 #include "modify.h"
 #include "update.h"
@@ -30,7 +27,7 @@
 #include <unordered_map>
 
 using namespace LAMMPS_NS;
-using NUCC::cspan;
+// using NUCC::cspan;
 
 /* ---------------------------------------------------------------------- */
 
@@ -53,7 +50,7 @@ ComputeClusterCF::ComputeClusterCF(LAMMPS* lmp, int narg, char** arg) : Compute(
   if (compute_cluster_size == nullptr) { error->all(FLERR, "compute {}: Cannot find compute with style 'size/cluster' with id: {}", style, arg[3]); }
 
   compute_rdf_atom = dynamic_cast<ComputeCFAtom*>(lmp->modify->get_compute_by_id(arg[4]));
-  if (compute_cluster_size == nullptr) { error->all(FLERR, "compute {}: Cannot find compute with style 'cf/atom' with id: {}", style, arg[4]); }
+  if (compute_rdf_atom == nullptr) { error->all(FLERR, "compute {}: Cannot find compute with style 'cf/atom' with id: {}", style, arg[4]); }
 
   size_cutoff = compute_cluster_size->get_size_cutoff();
 

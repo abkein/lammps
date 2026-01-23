@@ -39,7 +39,6 @@ ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) 
   size_vector_variable = 1;
 
   peratom_flag         = 1;
-  size_peratom_cols    = 0;
 
   if (comm->nprocs > LMP_NUCC_CLUSTER_MAX_OWNERS) {
     error->all(FLERR, "{}: Number of processor exceeds MAX_OWNER limit. Recompile with higher MAX_OWNER limit.", style);
@@ -349,7 +348,7 @@ void ComputeClusterSizeExt::compute_peratom()
   for (const auto& [clid, clidx] : cluster_map) {
     const cluster_data& clstr = clusters[clidx];
     const auto cluster_atoms = clstr.atoms();
-    for (int i = 0; i < clstr.l_size; ++i) { peratom_size[cluster_atoms[i]] = clstr.l_size; }
+    for (int i = 0; i < clstr.l_size; ++i) { peratom_size[cluster_atoms[i]] = clstr.g_size; }
   }
 }
 
