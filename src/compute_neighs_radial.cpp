@@ -32,12 +32,12 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterNeighsRadial::ComputeClusterNeighsRadial(LAMMPS *lmp, int narg, char **arg) : ComputeClusterNeighsRadialBase(lmp, narg, arg) { }
+ComputeNeighsRadial::ComputeNeighsRadial(LAMMPS *lmp, int narg, char **arg) : ComputeNeighsRadialBase(lmp, narg, arg) { }
 
 /* ---------------------------------------------------------------------- */
 
 #ifndef __NUCC_NEIGHS_RADIAL_USE_HALF
-void ComputeClusterNeighsRadial::compute_peratom()
+void ComputeNeighsRadial::compute_peratom()
 {
   invoked_peratom = update->ntimestep;
 
@@ -171,7 +171,7 @@ void ComputeNeighsRadial::compute_peratom()
    memory usage of local atom-based array
 ------------------------------------------------------------------------- */
 
-double ComputeClusterNeighsRadial::memory_usage()
+double ComputeNeighsRadial::memory_usage()
 {
   return nmax * (size_peratom_cols * sizeof(double) + sizeof(double*));
 }

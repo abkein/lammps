@@ -15,7 +15,7 @@
 
 #ifdef COMPUTE_CLASS
 // clang-format off
-ComputeStyle(neighs/radial/cluster,ComputeClusterNeighsRadial);
+ComputeStyle(neighs/radial/cluster,ComputeNeighsRadialCluster);
 // clang-format on
 #else
 
@@ -26,9 +26,9 @@ ComputeStyle(neighs/radial/cluster,ComputeClusterNeighsRadial);
 
 namespace LAMMPS_NS {
 
-class ComputeClusterNeighsRadial : public ComputeClusterNeighsRadialBase {
+class ComputeNeighsRadialCluster : public ComputeNeighsRadialBase {
  public:
-  ComputeClusterNeighsRadial(class LAMMPS*, int, char**);
+  ComputeNeighsRadialCluster(class LAMMPS*, int, char**);
   void compute_peratom() override;
   double memory_usage() override;
 

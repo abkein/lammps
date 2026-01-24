@@ -35,7 +35,7 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterNeighsRadialSize::ComputeClusterNeighsRadialSize(LAMMPS *lmp, int narg, char **arg) : Compute(lmp, narg, arg)
+ComputeNeighsRadialClusterSize::ComputeNeighsRadialClusterSize(LAMMPS *lmp, int narg, char **arg) : Compute(lmp, narg, arg)
 {
   local_flag = 1;
   array_flag = 1;
@@ -46,7 +46,7 @@ ComputeClusterNeighsRadialSize::ComputeClusterNeighsRadialSize(LAMMPS *lmp, int 
   compute_cluster_size = dynamic_cast<ComputeClusterSizeExt*>(lmp->modify->get_compute_by_id(arg[3]));
   if (compute_cluster_size == nullptr) { error->all(FLERR, "{}: Cannot find compute with style 'cluster/size' with given id: {}", style, arg[3]); }
   // Get neighs/radial compute
-  compute_neighs_radial = dynamic_cast<ComputeClusterNeighsRadialBase*>(lmp->modify->get_compute_by_id(arg[4]));
+  compute_neighs_radial = dynamic_cast<ComputeNeighsRadialBase*>(lmp->modify->get_compute_by_id(arg[4]));
   if (compute_neighs_radial == nullptr) { error->all(FLERR, "{}: Cannot find compute with style 'neighs/radial' with given id: {}", style, arg[4]); }
   size_local_rows = cutoff = compute_cluster_size->get_size_cutoff();
   size_local_cols = nbins = compute_neighs_radial->get_nbins(); // compute_neighs_radial->size_peratom_cols
@@ -65,7 +65,7 @@ ComputeClusterNeighsRadialSize::ComputeClusterNeighsRadialSize(LAMMPS *lmp, int 
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterNeighsRadialSize::~ComputeClusterNeighsRadialSize()
+ComputeNeighsRadialClusterSize::~ComputeNeighsRadialClusterSize()
 {
   memory->destroy(array_local);
   if (do_smooth) {
@@ -80,7 +80,7 @@ ComputeClusterNeighsRadialSize::~ComputeClusterNeighsRadialSize()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeClusterNeighsRadialSize::init()
+void ComputeNeighsRadialClusterSize::init()
 {
   array_local = memory->create(counts, cutoff, nbins, "compute:neighs/radial/size:counts");
   atom_counts_by_size.create(memory, cutoff, "compute:neighs/radial/size:atom_counts");
@@ -128,7 +128,7 @@ void ComputeClusterNeighsRadialSize::init()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeClusterNeighsRadialSize::compute_local()
+void ComputeNeighsRadialClusterSize::compute_local()
 {
   invoked_local = update->ntimestep;
 
@@ -215,11 +215,19 @@ void ComputeClusterNeighsRadialSize::compute_local()
   }
 }
 
+/* ---------------------------------------------------------------------- */
+
+void ComputeNeighsRadialClusterSize::compute_array(){
+  invoked_array = update->ntimestep;
+
+  if (invoked_local != update->ntimestep) { compute_local(); }
+}
+
 /* ----------------------------------------------------------------------
    memory usage of local atom-based array
 ------------------------------------------------------------------------- */
 
-double ComputeClusterNeighsRadialSize::memory_usage()
+double ComputeNeighsRadialClusterSize::memory_usage()
 {
   return cutoff * (nbins + 1) * sizeof(double) + nbins * sizeof(double*);
 }

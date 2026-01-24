@@ -15,7 +15,7 @@
 
 #ifdef COMPUTE_CLASS
 // clang-format off
-ComputeStyle(neighs/radial/cluster/size,ComputeClusterNeighsRadialSize);
+ComputeStyle(neighs/radial/cluster/size,ComputeNeighsRadialClusterSize);
 // clang-format on
 #else
 
@@ -30,10 +30,10 @@ ComputeStyle(neighs/radial/cluster/size,ComputeClusterNeighsRadialSize);
 
 namespace LAMMPS_NS {
 
-class ComputeClusterNeighsRadialSize : public Compute {
+class ComputeNeighsRadialClusterSize : public Compute {
  public:
-  ComputeClusterNeighsRadialSize(class LAMMPS*, int, char**);
-  ~ComputeClusterNeighsRadialSize() override;
+  ComputeNeighsRadialClusterSize(class LAMMPS*, int, char**);
+  ~ComputeNeighsRadialClusterSize() override;
   void init() override;
   void compute_local() override;
   void compute_array() override;
@@ -53,7 +53,7 @@ class ComputeClusterNeighsRadialSize : public Compute {
   double norm;                             // normalization constant; computed[internal]
 
   ComputeClusterSizeExt* compute_cluster_size           = nullptr;
-  ComputeClusterNeighsRadialBase* compute_neighs_radial = nullptr;
+  ComputeNeighsRadialBase* compute_neighs_radial        = nullptr;
 
 #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
   NUCC::cspan<double> norms;    // precomputed normalization constants for each bin

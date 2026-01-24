@@ -260,7 +260,7 @@ void ComputeClusterVolume::compute_local()
 
   int to_send = 0;
   int to_receive = 0;
-  const auto &cmap = compute_cluster_size->get_cIDs_by_size();
+  const auto &cmap = compute_cluster_size->get_clid_by_size();
   const auto &clusters = compute_cluster_size->get_clusters();
   if (mode == VOLUMEMODE::CALC) {
     for (const auto &[size, clidxs] : cmap) {

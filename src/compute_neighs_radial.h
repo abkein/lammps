@@ -26,9 +26,9 @@ ComputeStyle(neighs/radial,ComputeNeighsRadial);
 
 namespace LAMMPS_NS {
 
-class ComputeClusterNeighsRadial : public ComputeClusterNeighsRadialBase {
+class ComputeNeighsRadial : public ComputeNeighsRadialBase {
  public:
-  ComputeClusterNeighsRadial(class LAMMPS*, int, char**);
+  ComputeNeighsRadial(class LAMMPS*, int, char**);
   void compute_peratom() override;
   double memory_usage() override;
 };

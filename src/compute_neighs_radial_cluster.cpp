@@ -36,7 +36,7 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterNeighsRadial::ComputeClusterNeighsRadial(LAMMPS *lmp, int narg, char **arg) : ComputeClusterNeighsRadialBase(lmp, narg, arg)
+ComputeNeighsRadialCluster::ComputeNeighsRadialCluster(LAMMPS *lmp, int narg, char **arg) : ComputeNeighsRadialBase(lmp, narg, arg)
 {
   if (narg != 6) { error->all( FLERR, "Illegal compute neighs/raidal/cluster command; wrong number of arguments"); }
 
@@ -48,7 +48,7 @@ ComputeClusterNeighsRadial::ComputeClusterNeighsRadial(LAMMPS *lmp, int narg, ch
 /* ---------------------------------------------------------------------- */
 
 #ifndef __NUCC_NEIGHS_RADIAL_USE_HALF
-void ComputeClusterNeighsRadial::compute_peratom()
+void ComputeNeighsRadialCluster::compute_peratom()
 {
   invoked_peratom = update->ntimestep;
 
@@ -193,7 +193,7 @@ void ComputeNeighsRadial::compute_peratom()
    memory usage of local atom-based array
 ------------------------------------------------------------------------- */
 
-double ComputeClusterNeighsRadial::memory_usage()
+double ComputeNeighsRadialCluster::memory_usage()
 {
   return nmax * (size_peratom_cols * sizeof(double) + sizeof(double*));
 }

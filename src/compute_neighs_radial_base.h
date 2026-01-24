@@ -26,10 +26,10 @@
 
 namespace LAMMPS_NS {
 
-class ComputeClusterNeighsRadialBase : public Compute {
+class ComputeNeighsRadialBase : public Compute {
  public:
-  ComputeClusterNeighsRadialBase(LAMMPS* lmp, int narg, char** arg);
-  ~ComputeClusterNeighsRadialBase() override;
+  ComputeNeighsRadialBase(LAMMPS* lmp, int narg, char** arg);
+  ~ComputeNeighsRadialBase() override;
   void init() override;
   void init_list(int, class NeighList*) override;
 

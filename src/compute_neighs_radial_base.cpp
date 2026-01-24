@@ -34,7 +34,7 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterNeighsRadialBase::ComputeClusterNeighsRadialBase(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg) {
+ComputeNeighsRadialBase::ComputeNeighsRadialBase(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg) {
   peratom_flag = 1;
 
   if (narg != 5) { error->all( FLERR, "Illegal compute neighs/radial command; wrong number of arguments"); }
@@ -52,14 +52,14 @@ ComputeClusterNeighsRadialBase::ComputeClusterNeighsRadialBase(LAMMPS* lmp, int 
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterNeighsRadialBase::~ComputeClusterNeighsRadialBase()
+ComputeNeighsRadialBase::~ComputeNeighsRadialBase()
 {
   memory->destroy(rdf);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeClusterNeighsRadialBase::init()
+void ComputeNeighsRadialBase::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) {
     error->warning(FLERR, "More than one compute {}", style);
@@ -88,7 +88,7 @@ void ComputeClusterNeighsRadialBase::init()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeClusterNeighsRadialBase::init_list(int /*id*/, NeighList *ptr)
+void ComputeNeighsRadialBase::init_list(int /*id*/, NeighList *ptr)
 {
   list = ptr;
 }
