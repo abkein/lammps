@@ -10,7 +10,7 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       lib = pkgs.lib;
-      gccToolchain = pkgs.gcc.cc;      # "real" gcc, not just the wrapper
+      gccToolchain = pkgs.gcc.cc; # "real" gcc, not just the wrapper
       mpi = pkgs.openmpi;
       clangTidyWrapped = pkgs.writeShellScriptBin "clang-tidy" ''
         exec ${lib.getExe' pkgs.clang "clang-tidy"} \
@@ -27,7 +27,9 @@
             }
           ];
           settings = {
+            "direnv.watchForChanges" = false;
             "cmake.sourceDirectory" = "/home/kein/repos/mylammps/cmake";
+
             "cpplint.cpplintPath" = lib.getExe' pkgs.cpplint "cpplint";
             "cpplint.lineLength" = 300;
             "cpplint.verbose" = 0;
@@ -45,8 +47,9 @@
     in
     {
       devShells.${system}.default = pkgs.mkShell {
-        BETTER_CODE_VSCODE_WORKSPACE_FILE = workspaceFile;
+        # BETTER_CODE_VSCODE_WORKSPACE_FILE = workspaceFile;
         packages = with pkgs; [
+          jq
           cmake
           ninja
           pkg-config
@@ -96,6 +99,11 @@
           cppcheck
           cpplint
         ];
+
+        shellHook = ''
+          export BETTER_CODE_VSCODE_WORKSPACE_FILE="$PWD/.vscode/LAMMPS.code-workspace"
+          cat ${workspaceFile} | jq . >"$BETTER_CODE_VSCODE_WORKSPACE_FILE"
+        '';
       };
     };
 }
