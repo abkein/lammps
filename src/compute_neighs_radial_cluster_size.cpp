@@ -26,6 +26,7 @@
 #include "pair.h"
 #include "update.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 

@@ -69,3 +69,4 @@ src/Makefile.package.settings-e
 .direnv
 .envrc
 .cache
+testing
