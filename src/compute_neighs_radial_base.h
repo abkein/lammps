@@ -35,7 +35,7 @@ class ComputeNeighsRadialBase : public Compute {
 
   inline constexpr const int get_nbins() const noexcept { return nbins; }
   inline constexpr const int get_cutoff() const noexcept { return cutoff; }
-  inline constexpr const int get_delta_r() const noexcept { return delta; }
+  inline constexpr const double get_delta_r() const noexcept { return delta; }
 
  protected:
   int nmax              = 0;    // previous `atom->nmax`, number of rows allocated for `rdf`

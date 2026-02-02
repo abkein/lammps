@@ -38,7 +38,7 @@ using namespace LAMMPS_NS;
 
 ComputeNeighsRadialCluster::ComputeNeighsRadialCluster(LAMMPS *lmp, int narg, char **arg) : ComputeNeighsRadialBase(lmp, narg, arg)
 {
-  if (narg != 6) { error->all( FLERR, "Illegal compute neighs/raidal/cluster command; wrong number of arguments"); }
+  if (narg < 6) { error->all( FLERR, "Illegal compute neighs/raidal/cluster command; wrong number of arguments"); }
 
   // Get cluster/atom compute
   compute_cluster_atom = lmp->modify->get_compute_by_id(arg[5]);

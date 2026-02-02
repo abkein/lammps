@@ -46,14 +46,15 @@ class ComputeNeighsRadialClusterSize : public Compute {
   double delta;                            // width of a sigle bin, delta r; defined[internal]
   double sigma;                            // smoothing kernel width; defined[user]
   NUCC::cspan<int> atom_counts_by_size;    // number of local atoms belonging to the size
-  double** weights = nullptr;              // weights used for smoothing the distribution
-  double** counts  = nullptr;              // unsmoothed counts
-  double** counts2 = nullptr;              // unsmoothed counts
+  double** weights       = nullptr;        // weights used for smoothing the distribution
+  double** counts        = nullptr;        // unsmoothed counts
+  double** counts2       = nullptr;        // unsmoothed counts
+  double** counts_global = nullptr;        // global counts
   int max_neigh_bin;                       // max neighbor bin to count contribution to smoothing from
   double norm;                             // normalization constant; computed[internal]
 
-  ComputeClusterSizeExt* compute_cluster_size           = nullptr;
-  ComputeNeighsRadialBase* compute_neighs_radial        = nullptr;
+  ComputeClusterSizeExt* compute_cluster_size    = nullptr;
+  ComputeNeighsRadialBase* compute_neighs_radial = nullptr;
 
 #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
   NUCC::cspan<double> norms;    // precomputed normalization constants for each bin

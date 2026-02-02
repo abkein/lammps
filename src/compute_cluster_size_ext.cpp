@@ -15,6 +15,7 @@
 
 #include "compute_cluster_size_ext.h"
 #include "nucc_cspan.hpp"
+#include "nucc_defs.hpp"
 
 #include "atom.h"
 #include "comm.h"
@@ -22,6 +23,7 @@
 #include "modify.h"
 #include "update.h"
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 
@@ -30,8 +32,7 @@ using namespace NUCC;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) :
-    Compute(lmp, narg, arg), nloc(0), nc_global(0), nloc_gather(0), nloc_peratom(0)
+ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
 {
   vector_flag          = 1;
   extvector            = 0;
@@ -72,11 +73,8 @@ ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) 
 
   // MPI_Datatype type[2] = {MPI_INT, MPI_INT};
   // int blocklen[2] = {1, 1};
-  MPI_Aint disp[2];
-
   // Calculate displacements
-  disp[0] = offsetof(cldata, id);
-  disp[1] = offsetof(cldata, sz);
+  std::array<MPI_Aint, 2> disp = {offsetof(cldata, id), offsetof(cldata, sz)};
 
   // MPI_Type_create_struct(2, blocklen, disp, type, &MPI_CLDATA);
   // MPI_Type_commit(&MPI_CLDATA);
@@ -195,7 +193,7 @@ void ComputeClusterSizeExt::compute_vector()
   for (int i = 0; i < atom->nlocal; ++i) {
     if ((atom->mask[i] & groupbit) != 0) {
       const int clid = static_cast<int>(cluster_ids[i]);
-      if (cluster_map.count(clid) == 0) {
+      if (!cluster_map.contains(clid)) {
         const int clidx   = cluster_map.size();
         cluster_map[clid] = clidx;
         clusters[clidx]   = cluster_data(clid);
@@ -213,7 +211,7 @@ void ComputeClusterSizeExt::compute_vector()
   for (int i = atom->nlocal; i < atom->nmax; ++i) {
     if ((atom->mask[i] & groupbit) != 0) {
       const auto clid = static_cast<int>(cluster_ids[i]);
-      if (cluster_map.count(clid) > 0) {
+      if (cluster_map.contains(clid)) {
         cluster_data& clstr = clusters[cluster_map[clid]];
         if (clstr.nghost < LMP_NUCC_CLUSTER_MAX_GHOST) {
           clstr.ghost<false>()[clstr.nghost++] = i;
@@ -262,7 +260,7 @@ void ComputeClusterSizeExt::compute_vector()
   for (int i = 0; i < comm->nprocs; ++i) {
     for (int j = 0; j < counts_global[i] / 2; ++j) {
       const cldata& cl = gathered[displs[i] / 2 + j];
-      if (cluster_map.count(cl.id) > 0) {
+      if (cluster_map.contains(cl.id)) {
         cluster_data& clstr = clusters[cluster_map[cl.id]];
         if (i != comm->me) { clstr.owners<false>()[clstr.nowners++] = i; }
         clstr.g_size += cl.sz;
@@ -279,7 +277,7 @@ void ComputeClusterSizeExt::compute_vector()
   nmono        = 0;
 
   for (const auto& [clid, clidx] : cluster_map) {
-    cluster_data& clstr = clusters[clidx];
+    const cluster_data& clstr = clusters[clidx];
 #ifdef __NUCC_ALGO_CHECK
     const auto clatoms = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) {
@@ -347,7 +345,7 @@ void ComputeClusterSizeExt::compute_peratom()
 
   for (const auto& [clid, clidx] : cluster_map) {
     const cluster_data& clstr = clusters[clidx];
-    const auto cluster_atoms = clstr.atoms();
+    const auto cluster_atoms  = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) { peratom_size[cluster_atoms[i]] = clstr.g_size; }
   }
 }
@@ -356,17 +354,17 @@ void ComputeClusterSizeExt::compute_peratom()
    memory usage of maps and dist
 ------------------------------------------------------------------------- */
 
-    double ComputeClusterSizeExt::memory_usage()
-    {
-      std::size_t sum = dist.memory_usage() + dist_local.memory_usage();
-      sum += counts_global.memory_usage() + displs.memory_usage();
-      sum += clusters.memory_usage();
-      sum += ns.memory_usage() + gathered.memory_usage();
-      sum += monomers.memory_usage();
-      // sum += keeper1->memory_usage();
-      // sum += keeper2->memory_usage();
-      // sum += keeper3->memory_usage();
-      return static_cast<double>(sum);
-    }
+double ComputeClusterSizeExt::memory_usage()
+{
+  std::size_t sum = dist.memory_usage() + dist_local.memory_usage();
+  sum += counts_global.memory_usage() + displs.memory_usage();
+  sum += clusters.memory_usage();
+  sum += ns.memory_usage() + gathered.memory_usage();
+  sum += monomers.memory_usage();
+  // sum += keeper1->memory_usage();
+  // sum += keeper2->memory_usage();
+  // sum += keeper3->memory_usage();
+  return static_cast<double>(sum);
+}
 
-  /* ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */

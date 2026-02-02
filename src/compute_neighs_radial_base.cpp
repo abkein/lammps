@@ -37,7 +37,7 @@ using namespace LAMMPS_NS;
 ComputeNeighsRadialBase::ComputeNeighsRadialBase(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg) {
   peratom_flag = 1;
 
-  if (narg != 5) { error->all( FLERR, "Illegal compute neighs/radial command; wrong number of arguments"); }
+  if (narg < 5) { error->all( FLERR, "Illegal compute neighs/radial command; wrong number of arguments"); }
 
   delta = utils::numeric(FLERR,arg[3],false,lmp);
   cutoff    = utils::numeric(FLERR,arg[4],false,lmp);

@@ -58,10 +58,10 @@ class ComputeClusterSizeExt : public Compute {
   inline constexpr const NUCC::cspan<const double> get_data() const noexcept { return NUCC::cspan<const double>(dist); }
   inline constexpr int get_nonexclusive() const noexcept(true) { return nonexclusive; }
   inline constexpr const std::unordered_map<int, int>& get_cluster_map() const noexcept(true) { return cluster_map; }
-  inline constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size() const noexcept(true) { return clid_by_size; }
-  inline constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size_all() const noexcept(true) { return clid_by_size_global; }
   //   inline constexpr const NUCC::Map_t<int, int> *get_cluster_map() const noexcept(true) { return cluster_map; }
+  inline constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size() const noexcept(true) { return clid_by_size; }
   //   inline constexpr const NUCC::Map_t<int, NUCC::Vec_t<int>> *get_cIDs_by_size_my() const noexcept { return cIDs_by_size; }
+  inline constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size_global() const noexcept(true) { return clid_by_size_global; }
   //   inline constexpr const NUCC::Map_t<int, NUCC::Vec_t<int>> *get_cIDs_by_size() const noexcept { return cIDs_by_size_all; }
   inline constexpr const NUCC::cspan<const NUCC::cluster_data> get_clusters() const noexcept(true)
   {

@@ -40,6 +40,7 @@ ComputeNeighsRadialClusterSize::ComputeNeighsRadialClusterSize(LAMMPS *lmp, int 
 {
   local_flag = 1;
   array_flag = 1;
+  extarray = 0;
 
   if (narg < 5) { error->all( FLERR, "Illegal compute cf/atom command; wrong number of arguments"); }
 
@@ -49,8 +50,8 @@ ComputeNeighsRadialClusterSize::ComputeNeighsRadialClusterSize(LAMMPS *lmp, int 
   // Get neighs/radial compute
   compute_neighs_radial = dynamic_cast<ComputeNeighsRadialBase*>(lmp->modify->get_compute_by_id(arg[4]));
   if (compute_neighs_radial == nullptr) { error->all(FLERR, "{}: Cannot find compute with style 'neighs/radial' with given id: {}", style, arg[4]); }
-  size_local_rows = cutoff = compute_cluster_size->get_size_cutoff();
-  size_local_cols = nbins = compute_neighs_radial->get_nbins(); // compute_neighs_radial->size_peratom_cols
+  size_array_rows = size_local_rows = cutoff = compute_cluster_size->get_size_cutoff();
+  size_array_cols = size_local_cols = nbins = compute_neighs_radial->get_nbins(); // compute_neighs_radial->size_peratom_cols
   delta = compute_neighs_radial->get_delta_r();
 
   if (narg > 5 && ::strcmp(arg[5], "smooth") == 0) {
@@ -60,15 +61,18 @@ ComputeNeighsRadialClusterSize::ComputeNeighsRadialClusterSize(LAMMPS *lmp, int 
     if (sigma <= 0.0) { error->all(FLERR,"Illegal compute {} command; kernel width must be positive: {}",     style, arg[6]); }
     max_neigh_bin = static_cast<int>(::ceil(NEIGH_BIN_CUTOFF_COEFF*sigma/delta));
   }
-
-  norm = 1. / (MathConst::MY_4PI * delta * delta * delta);
+  norm = 1. / (MathConst::MY_4PI * delta * delta * delta * comm->nprocs);
+  if (comm->me == 0) {
+    utils::logmesg(lmp, "{}: cutoff: {}, nbins: {}, delta: {}, norm: {:.8f}\n", style, cutoff, nbins, delta, norm);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
 
 ComputeNeighsRadialClusterSize::~ComputeNeighsRadialClusterSize()
 {
-  memory->destroy(array_local);
+  memory->destroy(counts);
+  memory->destroy(counts_global);
   if (do_smooth) {
     memory->destroy(counts2);
     memory->destroy(weights);
@@ -84,6 +88,7 @@ ComputeNeighsRadialClusterSize::~ComputeNeighsRadialClusterSize()
 void ComputeNeighsRadialClusterSize::init()
 {
   array_local = memory->create(counts, cutoff, nbins, "compute:neighs/radial/size:counts");
+  array = memory->create(counts_global, cutoff, nbins, "compute:neighs/radial/size:counts_global");
   atom_counts_by_size.create(memory, cutoff, "compute:neighs/radial/size:atom_counts");
 
   if (do_smooth) {
@@ -118,10 +123,13 @@ void ComputeNeighsRadialClusterSize::init()
 
 #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
   norms.create(memory, nbins, "compute:neighs/radial/size:norms");
+  if (comm->me == 0) {utils::logmesg(lmp, "{}: norms:", style);}
   for (int nbin = 0; nbin < nbins; ++nbin) {
     const double tmp = 1./(0.5 + nbin);
     norms[nbin] = norm * tmp * tmp;
+    if (comm->me == 0) {utils::logmesg(lmp, " {:.8f}", norms[nbin]);}
   }
+  if (comm->me == 0) {utils::logmesg(lmp, "\n");}
 #endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
 
   initialized_flag = 1;
@@ -161,6 +169,7 @@ void ComputeNeighsRadialClusterSize::compute_local()
   for (int size = 0; size < cutoff; ++size){
     double* const size_counts = counts[size];
     const int count = atom_counts_by_size[size];
+    if (count == 0) { continue; }
     for (int nbin = 0; nbin < nbins; ++nbin){
       size_counts[nbin] /= count;
     }
@@ -222,6 +231,16 @@ void ComputeNeighsRadialClusterSize::compute_array(){
   invoked_array = update->ntimestep;
 
   if (invoked_local != update->ntimestep) { compute_local(); }
+
+  ::memset(counts_global[0], 0.0, cutoff * nbins * sizeof(double));
+
+  ::MPI_Allreduce(array_local[0], counts_global[0], cutoff * nbins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  // for (int i = 0; i < cutoff; ++i) {
+  //   for (int j = 0; j < nbins; ++j) {
+  //     counts_global[i][j] /= comm->nprocs;
+  //   }
+  // }
 }
 
 /* ----------------------------------------------------------------------
@@ -230,5 +249,5 @@ void ComputeNeighsRadialClusterSize::compute_array(){
 
 double ComputeNeighsRadialClusterSize::memory_usage()
 {
-  return cutoff * (nbins + 1) * sizeof(double) + nbins * sizeof(double*);
+  return 2 * cutoff * (nbins + 1) * sizeof(double) + nbins * sizeof(double*);
 }
