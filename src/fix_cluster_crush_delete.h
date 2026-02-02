@@ -37,52 +37,53 @@ class FixClusterCrushDelete : public Fix {
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
   class ComputeClusterTemp* compute_temp            = nullptr;
 
-  FILE* fp                                          = nullptr;
+  FILE* fp                                          = nullptr;    // file write diagnostics to
+  bigint next_step                                  = 0;          // next timestep wake up at
 
-  bigint next_step                                  = 0;
-
-  int nloc                                          = 0;
-  NUCC::cspan<int> p2m;
-  NUCC::cspan<int> pproc;    // number of atoms to move per rank
-  NUCC::cspan<int> c2c;
+  int nloc                                          = 0;    // number of elements allocated in arrays, ~atom->nlocal
+  NUCC::cspan<int> ids_a2m;                                 // local ids of atoms to move
+  NUCC::cspan<int> count_a2m;                               // number of atoms to move per rank [comm->nprocs]
+  NUCC::cspan<int> count_c2c;                               // number of clusters to crush per rank [comm->nprocs]
   std::array<double, 6> sbonds{};
-  std::array<double, 6> vels{};
+  std::array<double, 6> vels{};    // [user-defined] velocities to assign to created atoms
   std::array<double, 3> xmid{};
-  int to_insert              = 0;
+  int to_insert           = 0;
 
-  // parameters
-  int screenflag             = 0;
-  int fileflag               = 1;
-  int scaleflag              = 0;
-  int kmax                   = 0;
-  double overlap             = 0;
-  double overlapsq           = 0;
-  int maxtry                 = 1000;
-  int ntype                  = 0;
-  int groupid                = 0;
+  // user-defined parameters
+  int screenflag          = 0;    // [user-defined] whether to output info to screen
+  int fileflag            = 1;    // [user-defined] whether to output info into file
+  int scaleflag           = 0;    // [user-defined]
+  int kmax                = 0;    // [user-defined] max size of clusters
+  double overlap          = 0;    // [user-defined] minimum distance to other atoms from the place atom teleports to
+  double overlapsq        = 0;
+  int maxtry              = 1000;    // [user-defined] max attempts to search for a new suitable location
+  int ntype               = 0;       // [user-defined] type of atoms to create
+  int groupid             = 0;       // [user-defined]
 
-  //velocity and coordinates
-  bool fix_temp              = false;
-  double monomer_temperature = 0;
-  class RanPark* vrandom     = nullptr;
-  double vsigma              = 0;
-  DIST vdist                 = DIST::DIST_GAUSSIAN;
-  class RanPark* xrandom     = nullptr;
-  double xsigma              = 0;
-  DIST xdist                 = DIST::DIST_UNIFORM;
-  int varflag                = 0;
+  // velocity and coordinates
+  bool assign_temperature = false;    // [user-defined] whether temperature of created atoms should be assigned at creation
+  bool temp_fix           = true;     // [user-defined] whether temperature of created atoms is fixed or tracked // TODO: Implement
+  double atom_temperature = 0;        // [user-defined] temperature of created atoms
+  class RanPark* vrandom  = nullptr;
+  double vsigma           = 0;
+  DIST vdist              = DIST::DIST_GAUSSIAN;
+  class RanPark* xrandom  = nullptr;
+  double xsigma           = 0;
+  DIST xdist              = DIST::DIST_UNIFORM;
+  int varflag             = 0;
   char *vstr{}, *xstr{}, *ystr{}, *zstr{};
   std::array<int, 4> vars{};
 
   void deleteAtoms(const int atoms2move_local) const noexcept(true);
-  void postDelete() noexcept(true);
+  void postDelete() const noexcept(true);
 
-  int add() const;
-  void gen_pos(double* const coord, int nparticle, int nattempt) const noexcept;
-  int vartest(double x, double y, double z) const noexcept;
-  bool check_overlap(const double* const coord) const noexcept;
-  void create_atom(double* const coord, bigint tag) const noexcept;
-  int placement_check_me(const double* const newcoord, const double* const sublo, const double* const subhi, int nparticle, int nattempt) const;
+  [[nodiscard]] int add() const;
+  void gen_pos(std::array<double, 3>& coord /*, int nparticle, int nattempt*/) const noexcept;
+  [[nodiscard]] bool vartest(const std::array<double, 3>& coord) const noexcept;
+  [[nodiscard]] bool check_overlap(const std::array<double, 3>& coord) const noexcept;
+  void create_atom(const std::array<double, 3>& coord, bigint tag) const noexcept;
+  [[nodiscard]] bool placement_check_me(const std::array<double, 3>& newcoord, const double* const sublo,
+                          const double* const subhi /*, int nparticle, int nattempt*/) const;
 };
 
 }    // namespace LAMMPS_NS
