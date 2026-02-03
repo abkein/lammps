@@ -17,9 +17,12 @@ FixStyle(cluster/crush/delete,FixClusterCrushDelete);
 
 #include "fix.h"
 #include "nucc_cspan.hpp"
-#include <array>
 
-enum class DIST { DIST_UNIFORM, DIST_GAUSSIAN };
+#include <array>
+#include <cstdint>
+#include <cstdio>
+
+enum class DIST : uint8_t { DIST_UNIFORM, DIST_GAUSSIAN };
 
 namespace LAMMPS_NS {
 class FixClusterCrushDelete : public Fix {

@@ -10,6 +10,7 @@
 #include "fix_cluster_crush_delete.h"
 #include "compute_cluster_size_ext.h"
 #include "compute_cluster_temps.h"
+#include "fmt/core.h"
 #include "nucc_cspan.hpp"
 #include "nucc_defs.hpp"
 
@@ -33,9 +34,11 @@
 #include "variable.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <unordered_map>
 
 using namespace LAMMPS_NS;
@@ -369,7 +372,7 @@ void FixClusterCrushDelete::pre_exchange()
   }
   count_c2c.reset();
   count_a2m.reset();
-  // ids_a2m.reset();   // we don't care of freeing this array because it's overwritten from the start and we keep track of its actual (used)size
+  // ids_a2m.reset();   // we don't care of freeing this array because it's overwritten from the beginning and we keep track of its actual (used) size
 
   // Count amount of local clusters to crush
   int clusters2crush_local = 0;
@@ -384,7 +387,7 @@ void FixClusterCrushDelete::pre_exchange()
       ++clusters2crush_local;
 #ifndef __NUCC_ALGO_CHECK
 
-      std::copy(cluster.atoms().data(), cluster.atoms().offset(cluster.l_size), ids_a2m.data());
+      std::copy(cluster.atoms().data(), cluster.atoms().offset(cluster.l_size), ids_a2m.offset(atoms2move_local));
       atoms2move_local += cluster.l_size;
 #else
       const auto cluster_atoms = cluster.atoms();
@@ -553,7 +556,7 @@ int FixClusterCrushDelete::add() const
 
     // warn if not successful b/c too many attempts
 
-    if ((warnflag != 0) && (success == 0) && (comm->me == 0)) {
+    if ((warnflag != 0) && success && (comm->me == 0)) {
       error->warning(FLERR, "One or more particle depositions were unsuccessful");
       warnflag = 0;
     }
