@@ -8,7 +8,7 @@ AlignEscapedNewlines:                 Left
 AlignOperands:                        false
 AllowShortBlocksOnASingleLine:        true
 AlwaysBreakTemplateDeclarations:      Yes
-IndentPPDirectives:                   None
+IndentPPDirectives:                   Leave
 AllowShortFunctionsOnASingleLine:     Inline
 AllowShortIfStatementsOnASingleLine:  WithoutElse
 AllowShortLambdasOnASingleLine:       None
