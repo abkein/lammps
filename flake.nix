@@ -17,7 +17,7 @@
       mpi = pkgs.openmpi;
       llvm = pkgs.llvmPackages_latest;
 
-      clangTidy = lib.getExe' llvm.clang-tools "clang-tidy";  # lib.getExe' pkgs.clang "clang-tidy"
+      clangTidy = lib.getExe' llvm.clang-tools "clang-tidy"; # lib.getExe' pkgs.clang "clang-tidy"
       clangTidyWrapped = pkgs.writeShellScriptBin "clang-tidy-wrapped" ''
         exec ${clangTidy} \
           --extra-arg=--gcc-toolchain=${gccToolchain} \
@@ -55,6 +55,10 @@
               "--platform=native"
               "--check-level=exhaustive"
               "--force"
+              "--cppcheck-build-dir=${root}/.cppcheck"
+              "--enable=warning,performance,portability,information,missingInclude"
+              "--platform=unix64"
+              "-j 6"
             ];
 
             "clang-tidy.buildPath" = "${root}/build";
@@ -62,8 +66,12 @@
             "clang-tidy.executable" = "${clangTidyWrapped}/bin/clang-tidy-wrapped";
             "clang-tidy.checks" = [
               "-*,boost-*,bugprone-*,concurrency-*,hicpp-*,modernize-*,performance-*,readability-*,llvm-*,misc-*,mpi-*,openmp-*"
-              "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses"
+              "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls"
               "-modernize-use-trailing-return-type,-hicpp-signed-bitwise"
+              # "-cppcoreguidelines-non-private-member-variables-in-classes"
+              "-cppcoreguidelines-special-member-functions"
+              "-misc-non-private-member-variables-in-classes"
+              "-llvm-header-guard"
             ];
           };
         }
