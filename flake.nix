@@ -56,9 +56,10 @@
               "--check-level=exhaustive"
               "--force"
               "--cppcheck-build-dir=${root}/.cppcheck"
-              "--enable=warning,performance,portability,information,missingInclude"
-              "--platform=unix64"
-              "-j 6"
+              "--inline-suppr"
+              # "--enable=warning,performance,portability,information,missingInclude"
+              # "--platform=unix64"
+              # "-j 6"
             ];
 
             "clang-tidy.buildPath" = "${root}/build";
@@ -67,9 +68,10 @@
             "clang-tidy.checks" = [
               "-*,boost-*,bugprone-*,concurrency-*,hicpp-*,modernize-*,performance-*,readability-*,llvm-*,misc-*,mpi-*,openmp-*"
               "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls"
-              "-modernize-use-trailing-return-type,-hicpp-signed-bitwise"
-              # "-cppcoreguidelines-non-private-member-variables-in-classes"
+              "-modernize-use-trailing-return-type,-modernize-return-braced-init-list"
+              "-hicpp-signed-bitwise,-hicpp-special-member-functions"
               "-cppcoreguidelines-special-member-functions"
+              # "-cppcoreguidelines-non-private-member-variables-in-classes"
               "-misc-non-private-member-variables-in-classes"
               "-llvm-header-guard"
             ];
