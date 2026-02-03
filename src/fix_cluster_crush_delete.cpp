@@ -339,6 +339,9 @@ FixClusterCrushDelete::~FixClusterCrushDelete() noexcept(true)
 void FixClusterCrushDelete::init()
 {
   if ((modify->get_fix_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one fix {}", style); }
+  if (atom->molecular != Atom::ATOMIC) {
+    error->all(FLERR, "{}: Cannot use with molecular systems (atom deletion does not update topology)", style);
+  }
 
   if ((ids_a2m.empty()) || (nloc < atom->nlocal)) {
     nloc = atom->nlocal;
@@ -700,19 +703,19 @@ void FixClusterCrushDelete::postDelete() const noexcept(true)
 
   if (atom->nellipsoids > 0) {
     nlocal_bonus = avec_ellipsoid->nlocal_bonus;
-    ::MPI_Allreduce(&nlocal_bonus, &atom->nellipsoids, 1, MPI_INT, MPI_SUM, world);
+    ::MPI_Allreduce(&nlocal_bonus, &atom->nellipsoids, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   }
   if (atom->nlines > 0) {
     nlocal_bonus = avec_line->nlocal_bonus;
-    ::MPI_Allreduce(&nlocal_bonus, &atom->nlines, 1, MPI_INT, MPI_SUM, world);
+    ::MPI_Allreduce(&nlocal_bonus, &atom->nlines, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   }
   if (atom->ntris > 0) {
     nlocal_bonus = avec_tri->nlocal_bonus;
-    ::MPI_Allreduce(&nlocal_bonus, &atom->ntris, 1, MPI_INT, MPI_SUM, world);
+    ::MPI_Allreduce(&nlocal_bonus, &atom->ntris, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   }
   if (atom->nbodies > 0) {
     nlocal_bonus = avec_body->nlocal_bonus;
-    ::MPI_Allreduce(&nlocal_bonus, &atom->nbodies, 1, MPI_INT, MPI_SUM, world);
+    ::MPI_Allreduce(&nlocal_bonus, &atom->nbodies, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   }
 
   // reset atom->map if it exists
