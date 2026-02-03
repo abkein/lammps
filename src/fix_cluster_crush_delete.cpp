@@ -512,7 +512,7 @@ int FixClusterCrushDelete::add() const
   for (int added = 0; added < to_insert; ++added) {
     // attempt an insertion until successful
 
-    bool success = false;
+    int success = 0;
     int attempt  = 0;
     while (attempt < maxtry) {
       ++attempt;
@@ -537,12 +537,10 @@ int FixClusterCrushDelete::add() const
       if (check_overlap(coord)) { continue; }
 
       // if ok, create atom and generate velocity
-      const bool placement_flag_ = placement_check_me(newcoord, sublo, subhi);
-      if (placement_flag_) { create_atom(coord, maxtag_all + 1); }
+      const int placement_flag = static_cast<int>(placement_check_me(newcoord, sublo, subhi));
+      if (placement_flag) { create_atom(coord, maxtag_all + 1); }
 
-      int placement_flag = placement_flag_ ? 1 : 0;
-      int flagsum        = 0;
-      ::MPI_Allreduce(&placement_flag, &flagsum, 1, MPI_INT, MPI_SUM, world);
+      ::MPI_Allreduce(&placement_flag, &success, 1, MPI_INT, MPI_SUM, world);
 #ifdef __NUCC_ALGO_CHECK
       if (flagsum > 1) { error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, flagsum); }
 // if ((flagsum == 0) && (comm->me == 0)) {
@@ -550,18 +548,17 @@ int FixClusterCrushDelete::add() const
 // }
 #endif    // __NUCC_ALGO_CHECK
 
-      success = flagsum != 0;
       break;
     }
 
     // warn if not successful b/c too many attempts
 
-    if ((warnflag != 0) && success && (comm->me == 0)) {
+    if ((warnflag != 0) && (success == 0) && (comm->me == 0)) {
       error->warning(FLERR, "One or more particle depositions were unsuccessful");
       warnflag = 0;
     }
 
-    if (success) {
+    if (success != 0) {
       ++atom->natoms;
       ++maxtag_all;
       ++ninserted;
