@@ -193,7 +193,10 @@ endif()
 
 # do not include the (obsolete) MPI C++ bindings which makes for leaner object files
 # and avoids namespace conflicts. Put this early to increase its visbility.
-set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ Bindings" FORCE)
+# do not apply when compiling SCAFACOS since it uses the obsolete bindings
+if (NOT PKG_SCAFACOS)
+  set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ Bindings" FORCE)
+endif()
 
 ########################################################################
 # User input options                                                   #
@@ -303,6 +306,7 @@ set(STANDARD_PACKAGES
   MACHDYN
   MANIFOLD
   MANYBODY
+  MBX
   MC
   MDI
   MEAM
@@ -558,7 +562,7 @@ else()
 endif()
 
 foreach(PKG_WITH_INCL GRAPHICS KSPACE PYTHON ML-IAP VORONOI COLVARS ML-HDNNP MDI MOLFILE NETCDF
-        PLUMED QMMM ML-QUIP SCAFACOS MACHDYN VTK KIM COMPRESS ML-PACE LEPTON EXTRA-COMMAND)
+        PLUMED QMMM ML-QUIP SCAFACOS MACHDYN VTK KIM COMPRESS ML-PACE LEPTON EXTRA-COMMAND MBX)
   if(PKG_${PKG_WITH_INCL})
     include(Packages/${PKG_WITH_INCL})
   endif()

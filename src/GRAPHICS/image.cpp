@@ -13,7 +13,8 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing author: Nathan Fabian (Sandia)
+   Contributing authors: Nathan Fabian (Sandia)
+                     and Axel Kohlmeyer (Temple)
 ------------------------------------------------------------------------- */
 
 #include "image.h"
@@ -56,6 +57,27 @@ enum { NUMERIC, MINVALUE, MAXVALUE };
 enum { CONTINUOUS, DISCRETE, SEQUENTIAL };
 enum { ABSOLUTE, FRACTIONAL };
 enum { NO, YES };
+
+struct TGAHeader {
+  unsigned char idlength;
+  unsigned char colormaptype;
+  unsigned char datatypecode;
+  unsigned char colormaporigin[2];
+  unsigned char colormaplength[2];
+  unsigned char colormapdepth;
+  unsigned char x_origin[2];
+  unsigned char y_origin[2];
+  unsigned char width[2];
+  unsigned char height[2];
+  unsigned char bitsperpixel;
+  unsigned char imagedescriptor;
+};
+
+struct TGAFooter {
+  unsigned int extoffset;
+  unsigned int devoffset;
+  char signature[18];
+};
 
 ////////////////////////////////////////////////////////////////////////
 // the following regular Bayer threshold matrix can be created for any
@@ -804,11 +826,34 @@ void Image::draw_pixmap(const double *x, int pixwidth, int pixheight, const unsi
   xc += width / 2;
   yc += height / 2;
 
+  // convert back to non-FSAA image coordinates, so we can re-use the pixmap drawing code
+  if (fsaa) {
+    xc /= 2;
+    yc /= 2;
+  }
+
+  draw_pixmap(xc, yc, pixwidth, pixheight, pixmap, transcolor, scale, opacity, dist);
+}
+
+/* ----------------------------------------------------------------------
+   scale and add pixmap centered at location xc, yc in image coordinates to image
+   background color indicates transparency and pixels in that color are skipped
+------------------------------------------------------------------------- */
+
+void Image::draw_pixmap(int xc, int yc, int pixwidth, int pixheight, const unsigned char *pixmap,
+                        double *transcolor, double scale, double opacity, double dist)
+{
   const unsigned char *mypixmap = pixmap;
   unsigned char *npixmap = nullptr;
 
-  // adjust scale factor for FSAA and only scale as much as needed.
-  if (fsaa) scale *= 2.0;
+  // adjust scale factor and image location for FSAA
+  if (fsaa) {
+    scale *= 2.0;
+    xc *= 2;
+    yc *= 2;
+  }
+
+  // only scale as much as needed.
   if (scale != 1.0) {
     int nwidth = std::lround(scale * pixwidth + 0.5);
     int nheight = std::lround(scale * pixheight + 0.5);
@@ -1498,6 +1543,8 @@ void Image::compute_SSAO()
 void Image::write_JPG(FILE *fp)
 {
 #ifdef LAMMPS_JPEG
+  if (!fp) return;
+
   const int aafactor = fsaa ? 2 : 1;
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
@@ -1533,6 +1580,8 @@ void Image::write_JPG(FILE *fp)
 void Image::write_PNG(FILE *fp)
 {
 #ifdef LAMMPS_PNG
+  if (!fp) return;
+
   const int aafactor = fsaa ? 2 : 1;
   const int pngwidth = width/aafactor;
   const int pngheight = height/aafactor;
@@ -1592,8 +1641,79 @@ void Image::write_PNG(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
+void Image::write_TGA(FILE *fp, bool compressed)
+{
+  if (!fp) return;
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int tgaheight = height/aafactor;
+  const int tgawidth = width/aafactor;
+
+  TGAHeader header;
+  memset(&header, 0, sizeof(header));
+  header.width[0] = static_cast<unsigned char>(tgawidth & 0xFF);
+  header.width[1] = static_cast<unsigned char>((tgawidth & 0xFF00) >> 8);
+  header.height[0] = static_cast<unsigned char>(tgaheight & 0xFF);
+  header.height[1] = static_cast<unsigned char>((tgaheight & 0xFF00) >> 8);
+  header.bitsperpixel = 3 * 8 * sizeof(unsigned char);
+
+  if (compressed) {
+    header.datatypecode = 10;    // RLE compressed RGB
+    fwrite(&header, sizeof(header), 1, fp);
+
+    unsigned char *pix;
+    unsigned char old[3];
+    unsigned char len;
+    for (int i=0; i < tgaheight; ++i) {
+      len = 0;
+      for (int j = 0; j < tgawidth; ++j) {
+        pix = &writeBuffer[i*3*tgawidth + 3*j];
+        if (len == 0) {
+          old[0] = pix[0];
+          old[1] = pix[1];
+          old[2] = pix[2];
+        }
+
+        if (memcmp(old, pix, 3) || (len == 127) || (j == tgawidth - 1)) {
+          if (j != tgawidth - 1) --len;
+          len |= 0x80U;
+          fputc(len, fp);
+          // TGA stores RGB as BGR
+          fputc(old[2], fp);
+          fputc(old[1], fp);
+          fputc(old[0], fp);
+          old[0] = pix[0];
+          old[1] = pix[1];
+          old[2] = pix[2];
+          len = 1;
+        } else ++len;
+      }
+    }
+  } else {
+    header.datatypecode = 2;    // uncompressed RGB
+    fwrite(&header, sizeof(header), 1, fp);
+
+    unsigned char *pix;
+    for (int i=0; i < tgaheight; ++i) {
+      for (int j = 0; j < tgawidth; ++j) {
+        pix = &writeBuffer[i*3*tgawidth + 3*j];
+        // TGA stores RGB as BGR
+        fputc(pix[2], fp);
+        fputc(pix[1], fp);
+        fputc(pix[0], fp);
+      }
+    }
+  }
+  TGAFooter footer{0, 0, "TRUEVISION-XFILE."};
+  fwrite(&footer, sizeof(footer), 1, fp);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Image::write_PPM(FILE *fp)
 {
+  if (!fp) return;
+
   const int aafactor = fsaa ? 2 : 1;
   const int ppmheight = height/aafactor;
   const int ppmwidth = width/aafactor;
@@ -1631,6 +1751,15 @@ int Image::map_reset(int index, int narg, char **arg)
 int Image::map_minmax(int index, double mindynamic, double maxdynamic)
 {
   return maps[index]->minmax(mindynamic,maxdynamic);
+}
+
+/* ----------------------------------------------------------------------
+   get min/max bounds of dynamic color map index and return 1 if dynamic
+------------------------------------------------------------------------- */
+
+int Image::map_info(int index, double &min, double &max)
+{
+  return maps[index]->info(min, max);
 }
 
 /* ----------------------------------------------------------------------
@@ -2194,8 +2323,8 @@ ColorMap::ColorMap(LAMMPS *lmp, Image *caller) : Pointers(lmp)
 
   dynamic = 1;
 
-  mlo = MINVALUE;
-  mhi = MAXVALUE;
+  locurrent = mlo = MINVALUE;
+  hicurrent = mhi = MAXVALUE;
   mstyle = CONTINUOUS;
   mrange = FRACTIONAL;
 
@@ -2259,8 +2388,8 @@ int ColorMap::reset(int narg, char **arg)
   if (nentry < 1) return 5;
   delete [] mentry;
   mentry = new MapEntry[nentry];
+  mentry[0].svalue = 0.0;
 
-  int expandflag = 0;
   int n = 5;
   for (int i = 0; i < nentry; i++) {
     if (mstyle == CONTINUOUS) {
@@ -2370,6 +2499,13 @@ int ColorMap::minmax(double mindynamic, double maxdynamic)
   }
 
   return 0;
+}
+
+int ColorMap::info(double &min, double &max)
+{
+  min = locurrent;
+  max = hicurrent;
+  return dynamic;
 }
 
 /* ----------------------------------------------------------------------
