@@ -26,6 +26,22 @@
           --extra-arg=-Qunused-arguments \
           "$@"
       '';
+      vscodeDir = "${root}/.vscode";
+      cppcheckBuildDir = "${root}/.cppcheck";
+      cppcheckSupprPlainLoc = "${vscodeDir}/cppcheck_suppressions";
+      cppcheckSupprPlain = pkgs.writeText "LAMMPS.code-workspace" ''
+        noExplicitConstructor:src/nucc_cspan.hpp
+      '';
+      clang-tidy-conf-loc = "${vscodeDir}/.clang-tidy";
+      clang-tidy-conf = pkgs.writeText "LAMMPS.clang-tidy" ''
+      Checks: >
+        cppcoreguidelines-pro-type-member-init
+
+      CheckOptions:
+        - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
+          value: 'true'
+      '';
+      workspaceFileLoc = "${vscodeDir}/LAMMPS.code-workspace";
       workspaceFile = pkgs.writeText "LAMMPS.code-workspace" (
         builtins.toJSON {
           folders = [
@@ -55,26 +71,42 @@
               "--platform=native"
               "--check-level=exhaustive"
               "--force"
-              "--cppcheck-build-dir=${root}/.cppcheck"
+              "--cppcheck-build-dir=${cppcheckBuildDir}"
               "--inline-suppr"
-              "--suppressions-list=${root}/.cppcheck/suppressions"
+              "--suppressions-list=${cppcheckSupprPlainLoc}"
               # "--enable=warning,performance,portability,information,missingInclude"
               # "--platform=unix64"
               # "-j 6"
             ];
+            "c-cpp-linter.general.sourceFileExtensions" = [
+              "c"
+              "h"
+              "cpp"
+              "hpp"
+            ];
 
             "clang-tidy.buildPath" = "${root}/build";
             "clang-tidy.lintOnSave" = false;
-            "clang-tidy.executable" = "${clangTidyWrapped}/bin/clang-tidy-wrapped";
+            "clang-tidy.executable" = clangTidy; #"${clangTidyWrapped}/bin/clang-tidy-wrapped";
+            "clang-tidy.configFile" = clang-tidy-conf-loc;
+            "clang-tidy.compilerArgs" = [
+              "--gcc-toolchain=${gccToolchain}"
+              "-stdlib=libstdc++"
+              "-isystem${mpi}/include"
+              "-Qunused-arguments"
+            ];
             "clang-tidy.checks" = [
               "-*,boost-*,bugprone-*,concurrency-*,hicpp-*,modernize-*,performance-*,readability-*,llvm-*,misc-*,mpi-*,openmp-*"
               "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls"
               "-modernize-use-trailing-return-type,-modernize-return-braced-init-list"
-              "-hicpp-signed-bitwise,-hicpp-special-member-functions"
+              # hicpp-member-init is an alias for enabled cppcoreguidelines-pro-type-member-init
+              # hicpp-special-member-functions is an alias for cppcoreguidelines-special-member-functions
+              "-hicpp-signed-bitwise,-hicpp-special-member-functions,-hicpp-member-init"
               "-cppcoreguidelines-special-member-functions"
               # "-cppcoreguidelines-non-private-member-variables-in-classes"
               "-misc-non-private-member-variables-in-classes"
               "-llvm-header-guard"
+              "-bugprone-easily-swappable-parameters"
             ];
           };
         }
@@ -138,8 +170,13 @@
         ];
 
         shellHook = ''
-          export BETTER_CODE_VSCODE_WORKSPACE_FILE="$PWD/.vscode/LAMMPS.code-workspace"
-          cat ${workspaceFile} | jq . >"$BETTER_CODE_VSCODE_WORKSPACE_FILE"
+          mkdir -p '${vscodeDir}'
+          export BETTER_CODE_VSCODE_WORKSPACE_FILE='${workspaceFileLoc}'
+          cat '${workspaceFile}' | jq . > '${workspaceFileLoc}'
+
+          mkdir -p '${cppcheckBuildDir}'
+          cat '${cppcheckSupprPlain}' > '${cppcheckSupprPlainLoc}'
+          cat '${clang-tidy-conf}' > '${clang-tidy-conf-loc}'
         '';
       };
     };
