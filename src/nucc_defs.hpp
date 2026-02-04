@@ -1,8 +1,5 @@
-#ifndef __NUCC_DEFS_HPP
-#define __NUCC_DEFS_HPP
-
-#include "nucc_allocator.hpp"
-#include "nucc_cspan.hpp"
+#ifndef NUCC_DEFS_HPP
+#define NUCC_DEFS_HPP
 
 #include <scoped_allocator>
 #include <unordered_map>
@@ -21,6 +18,25 @@
 #define __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
 
 namespace NUCC {
+
+template <typename T>
+concept Zeroable =
+    std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_same_v<T, bool> || std::is_pointer_v<T> || std::is_same_v<T, std::nullptr_t>;
+
+template <typename T>
+  requires Zeroable<T> && (!std::is_pointer_v<T>)
+T zero_value()
+{
+  return T{};
+}
+
+template <typename T>
+  requires Zeroable<T> && std::is_pointer_v<T>
+T zero_value()
+{
+  return nullptr;
+}
+
 
 // template <typename A>
 // using VecAlloc_t = CustomAllocator<A>;

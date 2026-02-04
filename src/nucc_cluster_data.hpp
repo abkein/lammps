@@ -4,22 +4,25 @@
 #include "nucc_cspan.hpp"
 #include "nucc_defs.hpp"
 
-#include <algorithm>
-#include <span>
+#include <array>
 
 namespace NUCC {
 
+using atoms_t = std::array<int, LMP_NUCC_CLUSTER_MAX_SIZE>;
+using owners_t = std::array<int, LMP_NUCC_CLUSTER_MAX_OWNERS>;
+using ghost_t = std::array<int, LMP_NUCC_CLUSTER_MAX_GHOST>;
+
 struct cluster_data {
   cluster_data() {
-    std::fill_n(static_cast<int *>(_owners), LMP_NUCC_CLUSTER_MAX_OWNERS, 0);
-    std::fill_n(static_cast<int *>(_atoms), LMP_NUCC_CLUSTER_MAX_SIZE, 0);
-    std::fill_n(static_cast<int *>(_ghost), LMP_NUCC_CLUSTER_MAX_GHOST, 0);
+    _owners.fill(0);
+    _atoms.fill(0);
+    _ghost.fill(0);
   }
 
   explicit cluster_data(const int _clid): clid(_clid) {
-    std::fill_n(static_cast<int *>(_owners), LMP_NUCC_CLUSTER_MAX_OWNERS, 0);
-    std::fill_n(static_cast<int *>(_atoms), LMP_NUCC_CLUSTER_MAX_SIZE, 0);
-    std::fill_n(static_cast<int *>(_ghost), LMP_NUCC_CLUSTER_MAX_GHOST, 0);
+    _owners.fill(0);
+    _atoms.fill(0);
+    _ghost.fill(0);
   }
 
   // void rearrange() noexcept { ::memcpy(_atoms + l_size, _ghost, (LMP_NUCC_CLUSTER_MAX_SIZE - l_size) * sizeof(int)); }
@@ -29,35 +32,40 @@ struct cluster_data {
   // return a span rendering the underlying array, allowing changes
   template <bool Protect = true>
     requires(!Protect)
-  [[nodiscard]] NUCC::cspan<int, LMP_NUCC_CLUSTER_MAX_SIZE> atoms()
-  {
-    return std::span<int, LMP_NUCC_CLUSTER_MAX_SIZE>(static_cast<int *>(_atoms), LMP_NUCC_CLUSTER_MAX_SIZE);
+  [[nodiscard]] cspan<int, LMP_NUCC_CLUSTER_MAX_SIZE> atoms() {
+    return cspan<int, LMP_NUCC_CLUSTER_MAX_SIZE>(_atoms.data(), LMP_NUCC_CLUSTER_MAX_SIZE);
   }
 
   // return a span rendering the underlying array, const version
-  [[nodiscard]] NUCC::cspan<const int> atoms() const { return std::span<const int>(static_cast<const int *>(_atoms), l_size); }
+  [[nodiscard]] cspan<const int> atoms() const {
+    return cspan<const int>(static_cast<const int *>(_atoms.data()), l_size);
+  }
 
   // return a span rendering the underlying array, allowing changes
   template <bool Protect = true>
     requires(!Protect)
-  [[nodiscard]] NUCC::cspan<int, LMP_NUCC_CLUSTER_MAX_SIZE> ghost()
+  [[nodiscard]] cspan<int, LMP_NUCC_CLUSTER_MAX_SIZE> ghost()
   {
-    return std::span<int, LMP_NUCC_CLUSTER_MAX_SIZE>(static_cast<int *>(_ghost), LMP_NUCC_CLUSTER_MAX_GHOST);
+    return cspan<int, LMP_NUCC_CLUSTER_MAX_SIZE>(static_cast<int *>(_ghost.data()), LMP_NUCC_CLUSTER_MAX_GHOST);
   }
 
   // return a span rendering the underlying array, const version
-  [[nodiscard]] NUCC::cspan<const int> ghost() const { return std::span<const int>(static_cast<const int *>(_ghost), LMP_NUCC_CLUSTER_MAX_GHOST); }
+  [[nodiscard]] cspan<const int> ghost() const {
+    return cspan<const int>(static_cast<const int *>(_ghost.data()), nghost);
+  }
 
   // return a span rendering the underlying array, allowing changes
   template <bool Protect = true>
     requires(!Protect)
-  [[nodiscard]] NUCC::cspan<int, LMP_NUCC_CLUSTER_MAX_OWNERS> owners()
+  [[nodiscard]] cspan<int, LMP_NUCC_CLUSTER_MAX_OWNERS> owners()
   {
-    return std::span<int, LMP_NUCC_CLUSTER_MAX_OWNERS>(static_cast<int *>(_owners), LMP_NUCC_CLUSTER_MAX_OWNERS);
+    return cspan<int, LMP_NUCC_CLUSTER_MAX_OWNERS>(static_cast<int *>(_owners.data()), LMP_NUCC_CLUSTER_MAX_OWNERS);
   }
 
   // return a span rendering the underlying array, const version
-  [[nodiscard]] NUCC::cspan<const int> owners() const { return std::span<const int>(static_cast<const int *>(_owners), nowners); }
+  [[nodiscard]] cspan<const int> owners() const {
+    return cspan<const int>(static_cast<const int *>(_owners.data()), nowners);
+  }
 
   int clid = 0;       // cluster ID
   int l_size = 0;     // local size
@@ -68,9 +76,9 @@ struct cluster_data {
   int nghost = 0;     // number of ghost atoms in cluster
 
  private:
-  int _owners[LMP_NUCC_CLUSTER_MAX_OWNERS];    // procs owning some cluster's atoms
-  int _atoms[LMP_NUCC_CLUSTER_MAX_SIZE];       // local ids of atoms
-  int _ghost[LMP_NUCC_CLUSTER_MAX_GHOST];      // local ids of ghost atoms
+  atoms_t  _atoms;       // local ids of atoms
+  owners_t _owners;    // procs owning some cluster's atoms
+  ghost_t  _ghost;      // local ids of ghost atoms
 };
 
 }    //  namespace NUCC

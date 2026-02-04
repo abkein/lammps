@@ -2,6 +2,7 @@
 #define NUCC_CUSTOM_CSPAN_HPP
 
 #include "memory.h"
+#include "nucc_defs.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -9,24 +10,6 @@
 #include <type_traits>
 
 namespace NUCC {
-
-template <typename T>
-concept Zeroable =
-    std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_same_v<T, bool> || std::is_pointer_v<T> || std::is_same_v<T, std::nullptr_t>;
-
-template <typename T>
-  requires Zeroable<T> && (!std::is_pointer_v<T>)
-T zero_value()
-{
-  return T{};
-}
-
-template <typename T>
-  requires Zeroable<T> && std::is_pointer_v<T>
-T zero_value()
-{
-  return nullptr;
-}
 
 #ifdef __NUCC_CSPAN_DEBUG_CALLS
 #include <iostream>
@@ -64,7 +47,7 @@ class cspan {
     return *this;
   }
 
-  constexpr T& at(std::size_t index)
+  [[nodiscard]] constexpr T& at(std::size_t index)
   #ifndef __NUCC_CSPAN_CHECK_ACCESS
       noexcept
   #endif
@@ -80,7 +63,7 @@ class cspan {
     return span_[index];
   }
 
-  constexpr T* offset(std::size_t offset)
+  [[nodiscard]] constexpr T* offset(std::size_t offset)
   #ifndef __NUCC_CSPAN_CHECK_ACCESS
       noexcept
   #endif
@@ -96,7 +79,7 @@ class cspan {
     return span_.data() + offset;
   }
 
-  constexpr T& operator[](std::size_t index)
+  [[nodiscard]] constexpr T& operator[](std::size_t index)
   #ifndef __NUCC_CSPAN_CHECK_ACCESS
       noexcept
   #endif
@@ -112,7 +95,7 @@ class cspan {
     return span_[index];
   }
 
-  constexpr const T& at(std::size_t index) const
+  [[nodiscard]] constexpr const T& at(std::size_t index) const
   #ifndef __NUCC_CSPAN_CHECK_ACCESS
       noexcept
   #endif
@@ -128,7 +111,7 @@ class cspan {
     return span_[index];
   }
 
-  constexpr const T* offset(std::size_t offset) const
+  [[nodiscard]] constexpr const T* offset(std::size_t offset) const
   #ifndef __NUCC_CSPAN_CHECK_ACCESS
       noexcept
   #endif
@@ -144,7 +127,7 @@ class cspan {
     return span_.data() + offset;
   }
 
-  constexpr const T& operator[](std::size_t index) const
+  [[nodiscard]] constexpr const T& operator[](std::size_t index) const
   #ifndef __NUCC_CSPAN_CHECK_ACCESS
       noexcept
   #endif
@@ -160,9 +143,9 @@ class cspan {
     return span_[index];
   }
 
-  constexpr T* data() noexcept { return span_.data(); }
+  [[nodiscard]] constexpr T* data() noexcept { return span_.data(); }
 
-  constexpr const T* data() const noexcept { return span_.data(); }
+  [[nodiscard]] constexpr const T* data() const noexcept { return span_.data(); }
 
   [[nodiscard]] constexpr std::size_t size() const noexcept { return span_.size(); }
 
