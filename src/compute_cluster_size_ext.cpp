@@ -74,7 +74,7 @@ ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) 
   // MPI_Datatype type[2] = {MPI_INT, MPI_INT};
   // int blocklen[2] = {1, 1};
   // Calculate displacements
-  std::array<MPI_Aint, 2> disp = {offsetof(cldata, id), offsetof(cldata, sz)};
+  // std::array<MPI_Aint, 2> disp = {offsetof(cldata, id), offsetof(cldata, sz)};
 
   // MPI_Type_create_struct(2, blocklen, disp, type, &MPI_CLDATA);
   // MPI_Type_commit(&MPI_CLDATA);
@@ -162,6 +162,7 @@ void ComputeClusterSizeExt::init()
 
 void ComputeClusterSizeExt::compute_vector()
 {
+  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   if (compute_cluster_atom->invoked_peratom != update->ntimestep) { compute_cluster_atom->compute_peratom(); }
@@ -225,13 +226,13 @@ void ComputeClusterSizeExt::compute_vector()
   // Fill `ns` for communication
   for (const auto& [clid, clidx] : cluster_map) {
     ns[clidx] = cldata(clid, clusters[clidx].l_size);
-#ifdef __NUCC_ALGO_CHECK
+    #ifdef __NUCC_ALGO_CHECK
     cluster_data& clstr      = clusters[clidx];
     const auto cluster_atoms = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) {
       if (!(cluster_atoms[i] < atom->nlocal)) { error->one(FLERR, "{}@{}: particle index exceeds nlocal", style, comm->me); }
     }
-#endif    // __NUCC_ALGO_CHECK
+    #endif    // __NUCC_ALGO_CHECK
   }
 
   // communicate about number of unique clusters
@@ -278,12 +279,14 @@ void ComputeClusterSizeExt::compute_vector()
 
   for (const auto& [clid, clidx] : cluster_map) {
     const cluster_data& clstr = clusters[clidx];
-#ifdef __NUCC_ALGO_CHECK
+
+    #ifdef __NUCC_ALGO_CHECK
     const auto clatoms = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) {
       if (!(clatoms[i] < atom->nlocal)) { error->one(FLERR, "{}@{}: particle index exceeds nlocal", style, comm->me); }
     }
-#endif    // __NUCC_ALGO_CHECK
+    #endif    // __NUCC_ALGO_CHECK
+
     if ((clstr.g_size < size_cutoff) && (clstr.g_size > 1)) { clid_by_size_global[clstr.g_size].push_back(clidx); }
     if (clstr.host == comm->me) {
       if (clstr.g_size < size_cutoff) { dist_local[clstr.g_size] += 1; }    // the actual size of `dist` and `dist_local` is size_cutoff+1
@@ -298,7 +301,7 @@ void ComputeClusterSizeExt::compute_vector()
 
   ::MPI_Allreduce(dist_local.data(), dist.data(), size_vector, MPI_DOUBLE, MPI_SUM, world);
 
-#ifdef __NUCC_ALGO_CHECK
+  #ifdef __NUCC_ALGO_CHECK
   for (const auto& [clid, clidx] : cluster_map) {
     const auto& clstr = clusters[clidx];
     if (clstr.clid != clid) { error->one(FLERR, "{}@{}: Cluster ID does not equals to map ID", style, comm->me); }
@@ -325,13 +328,14 @@ void ComputeClusterSizeExt::compute_vector()
     }
   }
   if (comm->me == 0) { utils::logmesg(lmp, "{}: {}: Check passed\n", style, update->ntimestep); }
-#endif    // __NUCC_ALGO_CHECK
+  #endif    // __NUCC_ALGO_CHECK
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeClusterSizeExt::compute_peratom()
 {
+  if (invoked_peratom == update->ntimestep) { return; }
   invoked_peratom = update->ntimestep;
 
   if (invoked_vector != update->ntimestep) { compute_vector(); }

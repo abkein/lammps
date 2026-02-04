@@ -23,8 +23,6 @@ ComputeStyle(neighs/radial/cluster/size,ComputeNeighsRadialClusterSize);
 #define COMPUTE_NEIGHS_RADIAL_CLUSTER_SIZE_H
 
 #include "compute.h"
-#include "compute_cluster_size_ext.h"
-#include "compute_neighs_radial_base.h"
 #include "nucc_cspan.hpp"
 #include "nucc_defs.hpp"
 
@@ -53,8 +51,8 @@ class ComputeNeighsRadialClusterSize : public Compute {
   int max_neigh_bin;                       // max neighbor bin to count contribution to smoothing from
   double norm;                             // normalization constant; computed[internal]
 
-  ComputeClusterSizeExt* compute_cluster_size    = nullptr;
-  ComputeNeighsRadialBase* compute_neighs_radial = nullptr;
+  class ComputeClusterSizeExt* compute_cluster_size    = nullptr;
+  class ComputeNeighsRadialBase* compute_neighs_radial = nullptr;
 
 #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
   NUCC::cspan<double> norms;    // precomputed normalization constants for each bin

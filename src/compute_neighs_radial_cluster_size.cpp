@@ -15,6 +15,8 @@
 // TODO: NUCC FILE
 
 #include "compute_neighs_radial_cluster_size.h"
+#include "compute_cluster_size_ext.h"
+#include "compute_neighs_radial_base.h"
 
 #include "atom.h"
 #include "comm.h"
@@ -30,7 +32,7 @@
 #include <cmath>
 #include <cstring>
 
-#define NEIGH_BIN_CUTOFF_COEFF 2
+constexpr int NEIGH_BIN_CUTOFF_COEFF = 2;
 
 using namespace LAMMPS_NS;
 
@@ -73,14 +75,14 @@ ComputeNeighsRadialClusterSize::~ComputeNeighsRadialClusterSize()
 {
   memory->destroy(counts);
   memory->destroy(counts_global);
-  if (do_smooth) {
+  if (do_smooth > 0) {
     memory->destroy(counts2);
     memory->destroy(weights);
   }
   atom_counts_by_size.destroy(memory);
-#ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
   norms.destroy(memory);
-#endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  #endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
 }
 
 /* ---------------------------------------------------------------------- */
@@ -91,7 +93,7 @@ void ComputeNeighsRadialClusterSize::init()
   array = memory->create(counts_global, cutoff, nbins, "compute:neighs/radial/size:counts_global");
   atom_counts_by_size.create(memory, cutoff, "compute:neighs/radial/size:atom_counts");
 
-  if (do_smooth) {
+  if (do_smooth > 0) {
     array_local = memory->create(counts2, cutoff, nbins, "compute:neighs/radial/size:counts_raw");
 
     const int num_neighs = 2*max_neigh_bin + 1;
@@ -121,7 +123,7 @@ void ComputeNeighsRadialClusterSize::init()
     }
   }
 
-#ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
   norms.create(memory, nbins, "compute:neighs/radial/size:norms");
   if (comm->me == 0) {utils::logmesg(lmp, "{}: norms:", style);}
   for (int nbin = 0; nbin < nbins; ++nbin) {
@@ -130,7 +132,7 @@ void ComputeNeighsRadialClusterSize::init()
     if (comm->me == 0) {utils::logmesg(lmp, " {:.8f}", norms[nbin]);}
   }
   if (comm->me == 0) {utils::logmesg(lmp, "\n");}
-#endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  #endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
 
   initialized_flag = 1;
 }
@@ -139,6 +141,7 @@ void ComputeNeighsRadialClusterSize::init()
 
 void ComputeNeighsRadialClusterSize::compute_local()
 {
+  if (invoked_local == update->ntimestep) { return; }
   invoked_local = update->ntimestep;
 
   if (compute_cluster_size->invoked_peratom != update->ntimestep) { compute_cluster_size->compute_peratom(); }
@@ -175,7 +178,7 @@ void ComputeNeighsRadialClusterSize::compute_local()
     }
   }
 
-  if (do_smooth){
+  if (do_smooth > 0){
     for (int i = 0; i < cutoff; ++i) {
       ::memset(counts2[i], 0.0, nbins * sizeof(double));
     }
@@ -186,31 +189,24 @@ void ComputeNeighsRadialClusterSize::compute_local()
       for (int nbin = 0; nbin<nbins; ++nbin){
         double sum = 0;
         const double* const bin_weights = weights[nbin];
+
+        const int ii = nbin-max_neigh_bin;
+        for (int j = std::max(0, -ii); j<std::min(num_neighs, nbins-ii); ++j){
+          sum += size_counts[ii+j]*bin_weights[j];
+        }
+
+        // more explicit version of the same loop
         // for (int j = -max_neigh_bin; j<max_neigh_bin+1; ++j){
         //   if ((nbin+j>=0) && (nbin+j<nbins)) {
         //     sum += size_counts[nbin+j]*bin_weights[max_neigh_bin+j];
         //   }
         // }
-        const int ii = nbin-max_neigh_bin;
-        for (int j = std::max(0, -ii); j<std::min(num_neighs, nbins-ii); ++j){
-          sum += size_counts[ii+j]*bin_weights[j];
-        }
+
         size_counts2[nbin] = sum;
       }
     }
   }
 
-  // for (int nbin = 0; nbin < nbins; ++nbin) {
-  //   #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
-  //   const double bin_norm = norms[nbin];
-  //   #else // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
-  //   const double tmp = 1./(0.5 + nbin);
-  //   const double bin_norm = norm * tmp * tmp;
-  //   #endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
-  //   for (int size = 0; size<cutoff; ++size) {
-  //     array_local[size][nbin] *= bin_norm;
-  //   }
-  // }
   for (int size = 0; size<cutoff; ++size) {
     double* const bins_size = array_local[size];
     for (int nbin = 0; nbin < nbins; ++nbin) {
@@ -223,11 +219,25 @@ void ComputeNeighsRadialClusterSize::compute_local()
       bins_size[nbin] *= bin_norm;
     }
   }
+
+  // rearranged variant possibly having better performance
+  // for (int nbin = 0; nbin < nbins; ++nbin) {
+  //   #ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  //   const double bin_norm = norms[nbin];
+  //   #else // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  //   const double tmp = 1./(0.5 + nbin);
+  //   const double bin_norm = norm * tmp * tmp;
+  //   #endif // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  //   for (int size = 0; size<cutoff; ++size) {
+  //     array_local[size][nbin] *= bin_norm;
+  //   }
+  // }
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeNeighsRadialClusterSize::compute_array(){
+  if (invoked_array == update->ntimestep) { return; }
   invoked_array = update->ntimestep;
 
   if (invoked_local != update->ntimestep) { compute_local(); }
@@ -235,12 +245,6 @@ void ComputeNeighsRadialClusterSize::compute_array(){
   ::memset(counts_global[0], 0.0, cutoff * nbins * sizeof(double));
 
   ::MPI_Allreduce(array_local[0], counts_global[0], cutoff * nbins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-  // for (int i = 0; i < cutoff; ++i) {
-  //   for (int j = 0; j < nbins; ++j) {
-  //     counts_global[i][j] /= comm->nprocs;
-  //   }
-  // }
 }
 
 /* ----------------------------------------------------------------------

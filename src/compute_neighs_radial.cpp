@@ -39,6 +39,7 @@ ComputeNeighsRadial::ComputeNeighsRadial(LAMMPS *lmp, int narg, char **arg) : Co
 #ifndef __NUCC_NEIGHS_RADIAL_USE_HALF
 void ComputeNeighsRadial::compute_peratom()
 {
+  if (invoked_peratom == update->ntimestep) { return; }
   invoked_peratom = update->ntimestep;
 
   if (atom->nmax > nmax) {
@@ -105,6 +106,7 @@ void ComputeNeighsRadial::compute_peratom()
 
 void ComputeNeighsRadial::compute_peratom()
 {
+  if (invoked_peratom == update->ntimestep) { return; }
   invoked_peratom = update->ntimestep;
 
   if (atom->nmax > nmax) {

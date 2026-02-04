@@ -20,8 +20,6 @@
 #include "atom.h"
 #include "comm.h"
 #include "error.h"
-#include "force.h"
-#include "math_const.h"
 #include "memory.h"
 #include "modify.h"
 #include "neigh_list.h"
@@ -50,6 +48,7 @@ ComputeNeighsRadialCluster::ComputeNeighsRadialCluster(LAMMPS *lmp, int narg, ch
 #ifndef __NUCC_NEIGHS_RADIAL_USE_HALF
 void ComputeNeighsRadialCluster::compute_peratom()
 {
+  if (invoked_peratom == update->ntimestep) { return; }
   invoked_peratom = update->ntimestep;
 
   if (compute_cluster_atom->invoked_peratom != update->ntimestep) { compute_cluster_atom->compute_peratom(); }
@@ -86,9 +85,6 @@ void ComputeNeighsRadialCluster::compute_peratom()
 
       // loop over list of all neighbors within force cutoff
 
-      // // initialize cf
-      // ::memset(cfi, 0.0, size_peratom_cols * sizeof(double));
-
       for (int jj = 0; jj < jnum; ++jj) {
         const int j = jlist[jj] & NEIGHMASK;
 
@@ -121,6 +117,7 @@ void ComputeNeighsRadialCluster::compute_peratom()
 
 void ComputeNeighsRadial::compute_peratom()
 {
+  if (invoked_peratom == update->ntimestep) { return; }
   invoked_peratom = update->ntimestep;
 
   if (compute_cluster_atom->invoked_peratom != update->ntimestep) { compute_cluster_atom->compute_peratom(); }

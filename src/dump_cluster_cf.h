@@ -23,6 +23,7 @@ DumpStyle(cf/cluster,DumpClusterCF);
 #define LMP_DUMP_CLUSTER_CF_H
 
 #include "dump.h"
+#include <cstdio>
 
 namespace LAMMPS_NS {
 
@@ -38,10 +39,10 @@ class DumpClusterCF : public Dump {
   FILE *file = nullptr;
 
   void init_style() override;
-  void pack(tagint *) override;
-  void write_header(bigint) override {}
+  void pack(tagint *ids) override;
+  void write_header(bigint ndump) override {}
   void write() override;
-  void write_data(int, double *) override {};
+  void write_data(int n, double *mybuf) override {};
 };
 
 }    // namespace LAMMPS_NS
