@@ -23,7 +23,6 @@
 #include "modify.h"
 #include "update.h"
 
-#include <array>
 #include <cstddef>
 #include <cstring>
 
