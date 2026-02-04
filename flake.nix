@@ -57,6 +57,7 @@
               "--force"
               "--cppcheck-build-dir=${root}/.cppcheck"
               "--inline-suppr"
+              "--suppressions-list=${root}/.cppcheck/suppressions"
               # "--enable=warning,performance,portability,information,missingInclude"
               # "--platform=unix64"
               # "-j 6"
