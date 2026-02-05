@@ -18,24 +18,18 @@
 #include "nucc_cspan.hpp"
 #include "nucc_defs.hpp"
 
-#include "atom.h"
 #include "comm.h"
-#include "domain.h"
 #include "error.h"
-#include "group.h"
-#include "memory.h"
 #include "modify.h"
 #include "update.h"
 
 #include <cstring>
-#include <unordered_map>
 
 using namespace LAMMPS_NS;
-using NUCC::cspan;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg) /*, substract_vcm(0)*/
+ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
 {
   vector_flag     = 1;
   size_vector     = 0;
@@ -58,7 +52,7 @@ ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(
   while (iarg < narg) {
     if (iarg + 2 > narg) { error->all(FLERR, "Illegal compute ke/cluster command"); }
     if (::strcmp(arg[iarg], "cut") == 0) {
-      int t_size_cutoff = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+      const int t_size_cutoff = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
       if (t_size_cutoff < 1) { error->all(FLERR, "size_cutoff for compute {} must be greater than 0", style); }
       if (t_size_cutoff > size_cutoff) {
         error->all(FLERR,
@@ -67,17 +61,10 @@ ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(
                    style);
       }
       iarg += 2;
-      // } else if (::strcmp(arg[iarg], "substract_vcm") == 0) {
-      //   substract_vcm = utils::logical(FLERR, arg[iarg + 1], false, lmp);
-      //   iarg += 2;
     } else {
       error->all(FLERR, "Illegal fix langevin command");
     }
   }
-
-  // double vcm[3]{};
-  // double masstotal = group->mass(igroup);
-  // group->vcm(igroup, masstotal, vcm);
 
   // Get ke/atom compute
   auto computes = lmp->modify->get_compute_by_style("ke/atom");
@@ -85,12 +72,7 @@ ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(
   compute_ke_atom = computes[0];
 
   size_local_rows = size_cutoff + 1;
-  local_kes.create(memory, size_local_rows, "compute:ke/cluster:local_kes");
-  vector_local = local_kes.data();
-
   size_vector  = size_cutoff + 1;
-  kes.create(memory, size_vector, "compute:ke/cluster:kes");
-  vector = kes.data();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -106,12 +88,19 @@ ComputeClusterKE::~ComputeClusterKE() noexcept(true)
 void ComputeClusterKE::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
+
+  local_kes.create(memory, size_local_rows, "compute:ke/cluster:local_kes");
+  vector_local = local_kes.data();
+
+  kes.create(memory, size_vector, "compute:ke/cluster:kes");
+  vector = kes.data();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeClusterKE::compute_vector()
 {
+  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   compute_local();
@@ -119,7 +108,7 @@ void ComputeClusterKE::compute_vector()
   kes.reset();
   ::MPI_Allreduce(local_kes.data(), kes.data(), size_vector, MPI_DOUBLE, MPI_SUM, world);
 
-  const double* dist = compute_cluster_size->vector;
+  const double* const dist = compute_cluster_size->vector;
   for (int i = 0; i < size_vector; ++i) {
     if (dist[i] > 0) { kes[i] /= dist[i]; }
   }
@@ -129,6 +118,7 @@ void ComputeClusterKE::compute_vector()
 
 void ComputeClusterKE::compute_local()
 {
+  if (invoked_local == update->ntimestep) { return; }
   invoked_local = update->ntimestep;
 
   if (compute_cluster_size->invoked_vector != update->ntimestep) { compute_cluster_size->compute_vector(); }
@@ -138,14 +128,14 @@ void ComputeClusterKE::compute_local()
   const double* const peratomkes = compute_ke_atom->vector_atom;
   local_kes.reset();
 
-  const auto& cluster_map = compute_cluster_size->get_cluster_map();
-  const auto& clusters = compute_cluster_size->get_clusters();
-  for (const auto& [clid, clidx] : cluster_map) {
-    const auto& clstr = clusters[clidx];
+  const int nclusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_cluster_map().size();
+  const auto& clusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_clusters();
+  for (int i = 0; i < nclusters; ++i) {
+    const auto& clstr = clusters[i];
     const auto& atoms = clstr.atoms();
     if (clstr.g_size < size_cutoff) {
       for (int i = 0; i < clstr.l_size; ++i) {
-        #ifdef __NUCC_CHECK_ACCESS
+        #ifdef __NUCC_ALGO_CHECK
         if (atoms[i] > atom->nlocal) {
           if (comm->me == 0) {
             utils::logmesg(lmp, "Cluster: {}\n", clid);
@@ -158,7 +148,7 @@ void ComputeClusterKE::compute_local()
           }
           error->one(FLERR, "{}: {}: Atom indice exceeds nlocal", style, update->ntimestep);
         }
-        #endif // __NUCC_CHECK_ACCESS
+        #endif // __NUCC_ALGO_CHECK
         local_kes[clstr.g_size] += peratomkes[atoms[i]];
       }
     }

@@ -19,7 +19,6 @@
 
 #include "comm.h"
 #include "error.h"
-#include "memory.h"
 #include "modify.h"
 #include "update.h"
 
@@ -50,7 +49,7 @@ ComputeClusterPE::ComputeClusterPE(LAMMPS* lmp, int narg, char** arg) : Compute(
   // Get the critical size
   size_cutoff = compute_cluster_size->get_size_cutoff();
   if ((narg >= 4) && (::strcmp(arg[4], "inherit") != 0)) {
-    int t_size_cutoff = utils::inumeric(FLERR, arg[4], true, lmp);
+    const int t_size_cutoff = utils::inumeric(FLERR, arg[4], true, lmp);
     if (t_size_cutoff < 1) { error->all(FLERR, "size_cutoff for compute {} must be greater than 0", style); }
     if (t_size_cutoff > size_cutoff) {
       error->all(FLERR,
@@ -66,12 +65,7 @@ ComputeClusterPE::ComputeClusterPE(LAMMPS* lmp, int narg, char** arg) : Compute(
   compute_pe_atom = computes[0];
 
   size_local_rows = size_cutoff + 1;
-  local_pes.create(memory, size_local_rows, "compute:pe/cluster:local_pes");
-  vector_local = local_pes.data();
-
   size_vector  = size_cutoff + 1;
-  pes.create(memory, size_vector, "compute:pe/cluster:pes");
-  vector = pes.data();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -87,12 +81,19 @@ ComputeClusterPE::~ComputeClusterPE() noexcept(true)
 void ComputeClusterPE::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
+
+  local_pes.create(memory, size_local_rows, "compute:pe/cluster:local_pes");
+  vector_local = local_pes.data();
+
+  pes.create(memory, size_vector, "compute:pe/cluster:pes");
+  vector = pes.data();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeClusterPE::compute_vector()
 {
+  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   compute_local();
@@ -100,7 +101,7 @@ void ComputeClusterPE::compute_vector()
   pes.reset();
   ::MPI_Allreduce(local_pes.data(), pes.data(), size_vector, MPI_DOUBLE, MPI_SUM, world);
 
-  const double* dist = compute_cluster_size->vector;
+  const double* const dist = compute_cluster_size->vector;
   for (int i = 0; i < size_vector; ++i) { pes[i] /= dist[i]; }
 }
 
@@ -108,6 +109,7 @@ void ComputeClusterPE::compute_vector()
 
 void ComputeClusterPE::compute_local()
 {
+  if (invoked_local == update->ntimestep) { return; }
   invoked_local = update->ntimestep;
 
   if (compute_cluster_size->invoked_vector != update->ntimestep) { compute_cluster_size->compute_vector(); }
@@ -117,7 +119,7 @@ void ComputeClusterPE::compute_local()
   const double* const peratompes = compute_pe_atom->vector_atom;
   local_pes.reset();
 
-  int nclusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_cluster_map().size();
+  const int nclusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_cluster_map().size();
   const auto& clusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_clusters();
   for (int i = 0; i < nclusters; ++i) {
     const auto& clstr = clusters[i];

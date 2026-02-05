@@ -35,9 +35,6 @@ class ComputeClusterKE : public Compute {
   void compute_local() override;
   double memory_usage() override;
 
-  inline constexpr NUCC::cspan<const double> get_data() const noexcept { return kes; }
-  inline constexpr NUCC::cspan<const double> get_data_local() const noexcept { return local_kes; }
-
  private:
   class ComputeClusterSizeExt *compute_cluster_size = nullptr;
   Compute *compute_ke_atom = nullptr;

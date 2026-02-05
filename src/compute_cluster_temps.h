@@ -34,11 +34,9 @@ class ComputeClusterTemp : public Compute {
   void compute_vector() override;
   double memory_usage() override;
 
-  inline constexpr NUCC::cspan<const double> get_data() const noexcept { return temp; }
-
  private:
-  class ComputeClusterSizeExt *compute_cluster_size = nullptr;
-  class ComputeClusterKE *compute_cluster_ke = nullptr;
+  class ComputeClusterSizeExt* compute_cluster_size = nullptr;
+  Compute* compute_cluster_ke = nullptr;
 
   NUCC::cspan<double> temp;    // array of temps of global clusters
   int size_cutoff;             // size of max cluster

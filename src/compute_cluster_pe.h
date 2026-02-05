@@ -35,13 +35,6 @@ public:
   void compute_local() override;
   double memory_usage() override;
 
-  inline constexpr NUCC::cspan<const double> get_data() const noexcept {
-    return pes;
-  }
-  inline constexpr NUCC::cspan<const double> get_data_local() const noexcept {
-    return local_pes;
-  }
-
 private:
   class ComputeClusterSizeExt *compute_cluster_size = nullptr;
   Compute *compute_pe_atom = nullptr;

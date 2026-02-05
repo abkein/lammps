@@ -2,6 +2,7 @@
 #define NUCC_DEFS_HPP
 
 #include <scoped_allocator>
+#include <cstddef>
 #include <unordered_map>
 #include <vector>
 

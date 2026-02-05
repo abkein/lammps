@@ -14,7 +14,6 @@
 // TODO: NUCC FILE
 
 #include "compute_cluster_temps.h"
-#include "compute_cluster_ke.h"
 #include "compute_cluster_size_ext.h"
 
 #include "comm.h"
@@ -23,10 +22,10 @@
 #include "modify.h"
 #include "update.h"
 
+#include <algorithm>
 #include <cstring>
 
 using namespace LAMMPS_NS;
-using NUCC::cspan;
 
 /* ---------------------------------------------------------------------- */
 
@@ -47,7 +46,7 @@ ComputeClusterTemp::ComputeClusterTemp(LAMMPS *lmp, int narg, char **arg) : Comp
                arg[3]);
   }
 
-  compute_cluster_ke = dynamic_cast<ComputeClusterKE *>((lmp->modify->get_compute_by_id(arg[4])));
+  compute_cluster_ke = lmp->modify->get_compute_by_id(arg[4]);
   if (compute_cluster_ke == nullptr) {
     error->all(FLERR, "{}: Cannot find compute with style 'ke/cluster' with id: {}", style,
                arg[4]);
@@ -56,11 +55,11 @@ ComputeClusterTemp::ComputeClusterTemp(LAMMPS *lmp, int narg, char **arg) : Comp
   // Get the critical size
   size_cutoff = compute_cluster_size->get_size_cutoff();
   if ((narg >= 5) && (::strcmp(arg[5], "inherit") != 0)) {
-    int t_size_cutoff = utils::inumeric(FLERR, arg[5], true, lmp);
+    const int t_size_cutoff = utils::inumeric(FLERR, arg[5], true, lmp);
     if (t_size_cutoff < 1) {
       error->all(FLERR, "size_cutoff for {} must be greater than 0: {}", style, arg[5]);
     }
-    size_cutoff = MIN(size_cutoff, t_size_cutoff);
+    size_cutoff = std::min(size_cutoff, t_size_cutoff);
   }
 
   size_vector = size_cutoff + 1;
@@ -88,6 +87,7 @@ void ComputeClusterTemp::init()
 
 void ComputeClusterTemp::compute_vector()
 {
+  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   if (compute_cluster_size->invoked_vector != update->ntimestep) {
@@ -99,8 +99,8 @@ void ComputeClusterTemp::compute_vector()
   }
 
   temp.reset();
-  cspan<const double> kes = compute_cluster_ke->get_data();
-  cspan<const double> dist = compute_cluster_size->get_data();
+  const double* const kes = compute_cluster_ke->vector;
+  const double* const dist = compute_cluster_size->vector;
   for (int i = 0; i < size_cutoff; ++i) {
     if (dist[i] > 0) { temp[i] = 2 * kes[i] / i / domain->dimension; }
   }

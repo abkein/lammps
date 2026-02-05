@@ -21,14 +21,12 @@
 
 #include "comm.h"
 #include "error.h"
-#include "memory.h"
 #include "modify.h"
 #include "update.h"
 
 #include <cstring>
 
 using namespace LAMMPS_NS;
-using NUCC::cspan;
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,7 +56,7 @@ ComputeClusterTE::ComputeClusterTE(LAMMPS* lmp, int narg, char** arg) : Compute(
   // Get the critical size
   size_cutoff = compute_cluster_size->get_size_cutoff();
   if ((narg >= 6) && (::strcmp(arg[6], "inherit") != 0)) {
-    int t_size_cutoff = utils::inumeric(FLERR, arg[6], true, lmp);
+    const int t_size_cutoff = utils::inumeric(FLERR, arg[6], true, lmp);
     if (t_size_cutoff < 1) { error->all(FLERR, "size_cutoff for compute {} must be greater than 0", style); }
     if (t_size_cutoff > size_cutoff) {
       error->all(FLERR,
@@ -69,12 +67,7 @@ ComputeClusterTE::ComputeClusterTE(LAMMPS* lmp, int narg, char** arg) : Compute(
   }
 
   size_local_rows = size_cutoff + 1;
-  local_tes.create(memory, size_local_rows, "compute:te/cluster:local_tes");
-  vector_local = local_tes.data();
-
   size_vector  = size_cutoff + 1;
-  tes.create(memory, size_vector, "compute:te/cluste:tes");
-  vector = tes.data();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -90,31 +83,42 @@ ComputeClusterTE::~ComputeClusterTE() noexcept(true)
 void ComputeClusterTE::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
+
+  local_tes.create(memory, size_local_rows, "compute:te/cluster:local_tes");
+  vector_local = local_tes.data();
+
+  tes.create(memory, size_vector, "compute:te/cluste:tes");
+  vector = tes.data();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeClusterTE::compute_vector()
 {
+  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   compute_local();
 
   tes.reset();
   ::MPI_Allreduce(local_tes.data(), tes.data(), size_vector, MPI_DOUBLE, MPI_SUM, world);
+
+  const double* const dist = compute_cluster_size->vector;
+  for (int i = 0; i < size_vector; ++i) { tes[i] /= dist[i]; }
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeClusterTE::compute_local()
 {
+  if (invoked_local == update->ntimestep) { return; }
   invoked_local = update->ntimestep;
 
   if (compute_cluster_ke->invoked_vector != update->ntimestep) { compute_cluster_ke->compute_vector(); }
   if (compute_cluster_pe->invoked_vector != update->ntimestep) { compute_cluster_pe->compute_vector(); }
 
-  const cspan<const double> per_cluster_pes = compute_cluster_ke->get_data_local();
-  const cspan<const double> per_cluster_kes = compute_cluster_pe->get_data_local();
+  const double* const per_cluster_pes = compute_cluster_ke->vector_local;
+  const double* const per_cluster_kes = compute_cluster_pe->vector_local;
   local_tes.reset();
 
   for (int i = 0; i < size_vector; i++) { local_tes[i] = per_cluster_pes[i] + per_cluster_kes[i]; }

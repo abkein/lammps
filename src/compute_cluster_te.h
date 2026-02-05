@@ -35,17 +35,10 @@ public:
   void compute_local() override;
   double memory_usage() override;
 
-  inline constexpr NUCC::cspan<const double> get_data() const noexcept {
-    return tes;
-  }
-  inline constexpr NUCC::cspan<const double> get_data_local() const noexcept {
-    return local_tes;
-  }
-
 private:
-  class ComputeClusterSizeExt *compute_cluster_size = nullptr;
-  class ComputeClusterPE *compute_cluster_pe = nullptr;
-  class ComputeClusterKE *compute_cluster_ke = nullptr;
+  class ComputeClusterSizeExt* compute_cluster_size = nullptr;
+  Compute* compute_cluster_pe = nullptr;
+  Compute* compute_cluster_ke = nullptr;
 
   NUCC::cspan<double> tes;       // array of tes of global clusters
   NUCC::cspan<double> local_tes; // array of tes of local clusters
