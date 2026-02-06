@@ -32,6 +32,7 @@ class ComputeClusterTemp : public Compute {
   ~ComputeClusterTemp() noexcept(true) override;
   void init() override;
   void compute_vector() override;
+  double compute_scalar() override;
   double memory_usage() override;
 
  private:

@@ -38,7 +38,7 @@ ComputeClusterPE::ComputeClusterPE(LAMMPS* lmp, int narg, char** arg) : Compute(
   size_local_rows = 0;
   size_local_cols = 0;
 
-  if (narg < 3) { utils::missing_cmd_args(FLERR, "compute pe/cluster", error); }
+  if (narg < 4) { utils::missing_cmd_args(FLERR, "compute pe/cluster", error); }
 
   // Parse arguments //
 
@@ -46,16 +46,23 @@ ComputeClusterPE::ComputeClusterPE(LAMMPS* lmp, int narg, char** arg) : Compute(
   compute_cluster_size = dynamic_cast<ComputeClusterSizeExt*>(lmp->modify->get_compute_by_id(arg[3]));
   if (compute_cluster_size == nullptr) { error->all(FLERR, "compute {}: Cannot find compute with style 'size/cluster' with id: {}", style, arg[3]); }
 
-  // Get the critical size
   size_cutoff = compute_cluster_size->get_size_cutoff();
-  if ((narg >= 4) && (::strcmp(arg[4], "inherit") != 0)) {
-    const int t_size_cutoff = utils::inumeric(FLERR, arg[4], true, lmp);
-    if (t_size_cutoff < 1) { error->all(FLERR, "size_cutoff for compute {} must be greater than 0", style); }
-    if (t_size_cutoff > size_cutoff) {
-      error->all(FLERR,
-                 "size_cutoff for compute {} cannot be greater than it of "
-                 "compute sizecluster",
-                 style);
+
+  int iarg    = 4;
+  while (iarg < narg) {
+    if (::strcmp(arg[iarg], "cut") == 0) {
+      const int t_size_cutoff = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+      if (t_size_cutoff < 1) { error->all(FLERR, "size_cutoff for compute {} must be greater than 0", style); }
+      if (t_size_cutoff > size_cutoff) {
+        error->all(FLERR,
+                   "size_cutoff for compute {} cannot be greater than it of "
+                   "compute cluster/size",
+                   style);
+      }
+      size_cutoff = std::min(size_cutoff, t_size_cutoff);
+      iarg += 2;
+    } else {
+      error->all(FLERR, "{}: Unsupported argument: {}", style, arg[iarg]);
     }
   }
 

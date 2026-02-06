@@ -38,7 +38,7 @@ class FixClusterCrushDelete : public Fix {
 
   class Region* region                              = nullptr;
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
-  class ComputeClusterTemp* compute_temp            = nullptr;
+  class Compute* compute_temp                       = nullptr;
 
   FILE* fp                                          = nullptr;    // file write diagnostics to
   bigint next_step                                  = 0;          // next timestep wake up at
@@ -81,12 +81,11 @@ class FixClusterCrushDelete : public Fix {
   void postDelete() const noexcept(true);
 
   [[nodiscard]] int add() const;
-  void gen_pos(std::array<double, 3>& coord /*, int nparticle, int nattempt*/) const noexcept;
+  void gen_pos(std::array<double, 3>& coord) const noexcept;
   [[nodiscard]] bool vartest(const std::array<double, 3>& coord) const noexcept;
-  [[nodiscard]] bool check_overlap(const std::array<double, 3>& coord) const noexcept;
+  [[nodiscard]] int check_overlap(const std::array<double, 3>& coord) const noexcept;
   void create_atom(const std::array<double, 3>& coord, bigint tag) const noexcept;
-  [[nodiscard]] bool placement_check_me(const std::array<double, 3>& newcoord, const double* const sublo,
-                          const double* const subhi /*, int nparticle, int nattempt*/) const;
+  [[nodiscard]] int placement_check_me(const std::array<double, 3>& newcoord, const double* const sublo, const double* const subhi) const;
 };
 
 }    // namespace LAMMPS_NS

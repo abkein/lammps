@@ -50,7 +50,6 @@ ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(
 
   int iarg    = 4;
   while (iarg < narg) {
-    if (iarg + 2 > narg) { error->all(FLERR, "Illegal compute ke/cluster command"); }
     if (::strcmp(arg[iarg], "cut") == 0) {
       const int t_size_cutoff = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
       if (t_size_cutoff < 1) { error->all(FLERR, "size_cutoff for compute {} must be greater than 0", style); }
@@ -60,9 +59,10 @@ ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(
                    "compute cluster/size",
                    style);
       }
+      size_cutoff = std::min(size_cutoff, t_size_cutoff);
       iarg += 2;
     } else {
-      error->all(FLERR, "Illegal fix langevin command");
+      error->all(FLERR, "{}: Unsupported argument: {}", style, arg[iarg]);
     }
   }
 
@@ -72,7 +72,7 @@ ComputeClusterKE::ComputeClusterKE(LAMMPS* lmp, int narg, char** arg) : Compute(
   compute_ke_atom = computes[0];
 
   size_local_rows = size_cutoff + 1;
-  size_vector  = size_cutoff + 1;
+  size_vector     = size_cutoff + 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -128,27 +128,25 @@ void ComputeClusterKE::compute_local()
   const double* const peratomkes = compute_ke_atom->vector_atom;
   local_kes.reset();
 
-  const int nclusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_cluster_map().size();
+  const int nclusters  = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_cluster_map().size();
   const auto& clusters = dynamic_cast<ComputeClusterSizeExt*>(compute_cluster_size)->get_clusters();
   for (int i = 0; i < nclusters; ++i) {
     const auto& clstr = clusters[i];
     const auto& atoms = clstr.atoms();
     if (clstr.g_size < size_cutoff) {
       for (int i = 0; i < clstr.l_size; ++i) {
-        #ifdef __NUCC_ALGO_CHECK
+#ifdef __NUCC_ALGO_CHECK
         if (atoms[i] > atom->nlocal) {
           if (comm->me == 0) {
             utils::logmesg(lmp, "Cluster: {}\n", clid);
             utils::logmesg(lmp, "l_size: {}, g_size: {}\n", clstr.l_size, clstr.g_size);
             utils::logmesg(lmp, "Atoms:\n");
-            for (int j = 0; j < clstr.l_size; ++j) {
-              utils::logmesg(lmp, "{} ", atoms[j]);
-            }
+            for (int j = 0; j < clstr.l_size; ++j) { utils::logmesg(lmp, "{} ", atoms[j]); }
             utils::logmesg(lmp, "\n");
           }
           error->one(FLERR, "{}: {}: Atom indice exceeds nlocal", style, update->ntimestep);
         }
-        #endif // __NUCC_ALGO_CHECK
+#endif    // __NUCC_ALGO_CHECK
         local_kes[clstr.g_size] += peratomkes[atoms[i]];
       }
     }

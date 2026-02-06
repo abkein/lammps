@@ -40,6 +40,7 @@
 #include <cstring>
 #include <functional>
 #include <unordered_map>
+#include <format>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -98,22 +99,26 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
 
   while (iarg < narg) {
     if (::strcmp(arg[iarg], "maxtry") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: maxtry", style), error); }
       // Max attempts to search for a new suitable location
       maxtry = utils::inumeric(FLERR, arg[iarg + 1], true, lmp);
       if (maxtry < 1) { error->all(FLERR, "{}: maxtry cannot be less than 1", style); }
       iarg += 2;
     } else if (::strcmp(arg[iarg], "temp") == 0) {
+      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: temp", style), error); }
       // Atom temperature
       assign_temperature = true;
       if (::strcmp(arg[iarg + 1], "fix") == 0) {
+        temp_fix         = true;
+        atom_temperature = utils::numeric(FLERR, arg[iarg + 2], true, lmp);
+        if (atom_temperature < 0) { error->all(FLERR, "{}: Atom temperature cannot be negative", style); }
       } else if (::strcmp(arg[iarg + 1], "track") == 0) {
         // TODO: Implement temperature track
         temp_fix = false;
+        if (::strcmp(arg[iarg + 2], "avg") == 0) {}
       } else {
         error->all(FLERR, "{}: Unrecognized style of `temp` keyword: {}. Possible values are `fix`, `track`.", style, arg[iarg + 1]);
       }
-      atom_temperature = utils::numeric(FLERR, arg[iarg + 2], true, lmp);
-      if (atom_temperature < 0) { error->all(FLERR, "{}: Atom temperature cannot be negative", style); }
       vdist = DIST::DIST_GAUSSIAN;
       iarg += 3;
 
@@ -127,6 +132,7 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
       iarg += 1;
 
     } else if (::strcmp(arg[iarg], "file") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: file", style), error); }
       if (comm->me == 0) {
         // Write output to file
         if (fileflag != 0) { error->one(FLERR, "{}: Both file and append keywords are present.", style); }
@@ -136,6 +142,7 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
       }
       iarg += 2;
     } else if (::strcmp(arg[iarg], "append") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: append", style), error); }
       if (comm->me == 0) {
         // Append output to file
         if (fileflag != 0) { error->one(FLERR, "{}: Both file and append keywords are present.", style); }
@@ -146,11 +153,13 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
       iarg += 2;
 
     } else if (::strcmp(arg[iarg], "nevery") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: nevery", style), error); }
       // Get execution period
       nevery = utils::inumeric(FLERR, arg[iarg + 1], true, lmp);
       iarg += 2;
 
     } else if (::strcmp(arg[iarg], "units") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: units", style), error); }
       // TODO: Not sure if this is handled properly
       if (::strcmp(arg[iarg + 1], "box") == 0) {
         scaleflag = 0;
@@ -162,12 +171,12 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
       iarg += 2;
 
     } else if (strcmp(arg[iarg], "var") == 0) {
-      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, "fix deposit var", error); }
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: var", style), error); }
       vstr    = utils::strdup(arg[iarg + 1]);
       varflag = 1;
       iarg += 2;
     } else if (strcmp(arg[iarg], "set") == 0) {
-      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, "fix deposit set", error); }
+      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: var", style), error); }
       if (strcmp(arg[iarg + 1], "x") == 0) {
         xstr = utils::strdup(arg[iarg + 2]);
       } else if (strcmp(arg[iarg + 1], "y") == 0) {
@@ -175,36 +184,36 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
       } else if (strcmp(arg[iarg + 1], "z") == 0) {
         zstr = utils::strdup(arg[iarg + 2]);
       } else {
-        error->all(FLERR, "Unknown fix deposit set option {}", arg[iarg + 2]);
+        error->all(FLERR, "{}: Unknown set option {}", style, arg[iarg + 2]);
       }
       iarg += 3;
     } else if (strcmp(arg[iarg], "group") == 0) {
-      if (iarg + 2 > narg) { error->all(FLERR, "Illegal fix deposit command"); }
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: group", style), error); }
       groupid = group->find(arg[iarg + 1]);
       if (groupid <= 0) { error->all(FLERR, "Specified group not found or group all is used"); }
       iarg += 2;
 
     } else if (strcmp(arg[iarg], "vx") == 0) {
-      if (iarg + 3 > narg) { error->all(FLERR, "Illegal fix deposit command"); }
+      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: vx", style), error); }
       vels[0] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       vels[1] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
       ++velsset;
       iarg += 3;
     } else if (strcmp(arg[iarg], "vy") == 0) {
-      if (iarg + 3 > narg) { error->all(FLERR, "Illegal fix deposit command"); }
+      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: vy", style), error); }
       vels[2] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       vels[3] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
       ++velsset;
       iarg += 3;
     } else if (strcmp(arg[iarg], "vz") == 0) {
-      if (iarg + 3 > narg) { error->all(FLERR, "Illegal fix deposit command"); }
+      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: vz", style), error); }
       vels[4] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       vels[5] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
       ++velsset;
       iarg += 3;
     } else if (strcmp(arg[iarg], "inpoint") == 0) {
+      if (iarg + 5 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: inpoint", style), error); }
       // TODO: Implement
-      if (iarg + 5 > narg) { error->all(FLERR, "Illegal fix deposit command"); }
       xmid[0] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       xmid[1] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
       xmid[2] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
@@ -221,7 +230,7 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
   // Get temp compute
   auto temp_computes = lmp->modify->get_compute_by_style("temp");
   if (temp_computes.empty()) { error->all(FLERR, "{}: Cannot find compute with style 'temp'.", style); }
-  compute_temp = dynamic_cast<ComputeClusterTemp*>(temp_computes[0]);
+  compute_temp = temp_computes[0];
   if (atom->mass_setflag[ntype] == 0) { error->all(FLERR, "{}: Atom mass for atom type {} is not set!", style, ntype); }
   vsigma = ::sqrt(atom_temperature / atom->mass[ntype]);
 
@@ -327,7 +336,6 @@ FixClusterCrushDelete::~FixClusterCrushDelete() noexcept(true)
   delete xrandom;
   delete vrandom;
 
-  // TODO: should be conditional
   delete[] vstr;
   delete[] xstr;
   delete[] ystr;
@@ -339,9 +347,8 @@ FixClusterCrushDelete::~FixClusterCrushDelete() noexcept(true)
 void FixClusterCrushDelete::init()
 {
   if ((modify->get_fix_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one fix {}", style); }
-  if (atom->molecular != Atom::ATOMIC) {
-    error->all(FLERR, "{}: Cannot use with molecular systems (atom deletion does not update topology)", style);
-  }
+  if (domain->dimension != 3) { error->all(FLERR, "{}: Can work only in 3D.", style); }
+  if (atom->molecular != Atom::ATOMIC) { error->all(FLERR, "{}: Cannot use with molecular systems (atom deletion does not update topology)", style); }
 
   if ((ids_a2m.empty()) || (nloc < atom->nlocal)) {
     nloc = atom->nlocal;
@@ -516,7 +523,7 @@ int FixClusterCrushDelete::add() const
     // attempt an insertion until successful
 
     int success = 0;
-    int attempt  = 0;
+    int attempt = 0;
     while (attempt < maxtry) {
       ++attempt;
 
@@ -537,13 +544,14 @@ int FixClusterCrushDelete::add() const
       if (!proceed) { continue; }
 
       // check for overlapping
-      if (check_overlap(coord)) { continue; }
+      if (check_overlap(coord) != 0) { continue; }
 
       // if ok, create atom and generate velocity
-      const int placement_flag = static_cast<int>(placement_check_me(newcoord, sublo, subhi));
-      if (placement_flag) { create_atom(coord, maxtag_all + 1); }
+      const int placement_flag = placement_check_me(newcoord, sublo, subhi);
+      if (placement_flag != 0) { create_atom(coord, maxtag_all + 1); }
 
       ::MPI_Allreduce(&placement_flag, &success, 1, MPI_INT, MPI_SUM, world);
+
 #ifdef __NUCC_ALGO_CHECK
       if (flagsum > 1) { error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, flagsum); }
 // if ((flagsum == 0) && (comm->me == 0)) {
@@ -582,8 +590,7 @@ int FixClusterCrushDelete::add() const
 
 /* ---------------------------------------------------------------------- */
 
-bool FixClusterCrushDelete::placement_check_me(const std::array<double, 3>& newcoord, const double* const sublo, const double* const subhi/*, int nparticle,
-                                               int nattempt*/) const
+int FixClusterCrushDelete::placement_check_me(const std::array<double, 3>& newcoord, const double* const sublo, const double* const subhi) const
 {
   bool ok = newcoord[0] >= sublo[0] && newcoord[0] < subhi[0] && newcoord[1] >= sublo[1] && newcoord[1] < subhi[1] && newcoord[2] >= sublo[2] &&
       newcoord[2] < subhi[2];
@@ -606,7 +613,7 @@ bool FixClusterCrushDelete::placement_check_me(const std::array<double, 3>& newc
     }
   }
 
-  return ok;
+  return static_cast<int>(ok);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -656,7 +663,7 @@ void FixClusterCrushDelete::gen_pos(std::array<double, 3>& coord /*, int npartic
 
 /* ---------------------------------------------------------------------- */
 
-bool FixClusterCrushDelete::check_overlap(const std::array<double, 3>& coord) const noexcept
+int FixClusterCrushDelete::check_overlap(const std::array<double, 3>& coord) const noexcept
 {
   const double* const* const x = atom->x;
 
@@ -674,7 +681,7 @@ bool FixClusterCrushDelete::check_overlap(const std::array<double, 3>& coord) co
   }
   int flagall = 0;
   MPI_Allreduce(&flag, &flagall, 1, MPI_INT, MPI_MAX, world);
-  return flagall != 0;
+  return flagall;
 }
 
 /* ---------------------------------------------------------------------- */
