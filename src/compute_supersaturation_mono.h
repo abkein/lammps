@@ -39,13 +39,12 @@ class ComputeSupersaturationMono : public Compute {
   double memory_usage() override;
 
  private:
-  class Region* region                     = nullptr;
-  Compute* compute_neighs                  = nullptr;
-  Compute* compute_temp                    = nullptr;
-  class ComputeClusterTemp* compute_cltemp = nullptr;
+  class Region* region    = nullptr;
+  Compute* compute_neighs = nullptr;
+  Compute* compute_temp   = nullptr;
 
   std::array<double, 3> coeffs{0, 0, 0};    // [user-defined] arrhenius coefficients
-  bool use_t1            = false;           // [user-defined] use monomer temperature instead of average
+  bool temp_avg          = true;            // [user-defined] use monomer temperature instead of average
 
   double local_scalar    = 0;    // local supersaturation
   int local_monomers     = 0;    // number of local monomers
@@ -53,7 +52,6 @@ class ComputeSupersaturationMono : public Compute {
   int nloc               = 0;    // number of elements in mono_idx
 
   NUCC::cspan<int> mono_idx;    // ids of local monomers
-   //   int* mono_idx{};    // ids of local monomers
 
   [[nodiscard]] double execute_func() const;    // monomer number density at saturation curve
 };
