@@ -443,10 +443,10 @@ void FixClusterCrushDelete::pre_exchange()
 
   if (clusters2crush_total > 0) { deleteAtoms(atoms2move_local); }
 
-  to_insert += atoms2move_total;
-  const int to_insert_prev = to_insert;
+  to_insert_total += atoms2move_total;
+  const int to_insert_prev = to_insert_total;
 
-  if (to_insert > 0) {
+  if (to_insert_total > 0) {
     if (assign_temperature && (!temp_fix)) {
       if (temp_size == 0) {
         const double ts_temp = (compute_temp->invoked_scalar != update->ntimestep) ? compute_temp->compute_scalar() : compute_temp->scalar;
@@ -457,7 +457,7 @@ void FixClusterCrushDelete::pre_exchange()
       }
     }
 
-    to_insert -= add();
+    to_insert_total -= add(1);
   }
 
   bigint nblocal = atom->nlocal;
@@ -467,8 +467,8 @@ void FixClusterCrushDelete::pre_exchange()
     // print status
     if (screenflag != 0) { utils::logmesg(lmp, "Crushed {} clusters -> deleted {} atoms.\n", clusters2crush_total, atoms2move_total); }
     if (fileflag != 0) {
-      utils::print(fp, "{},{},{},{},{},{}\n", update->ntimestep, atom->natoms, clusters2crush_total, atoms2move_total, to_insert_prev - to_insert,
-                   to_insert);
+      utils::print(fp, "{},{},{},{},{},{}\n", update->ntimestep, atom->natoms, clusters2crush_total, atoms2move_total,
+                   to_insert_prev - to_insert_total, to_insert_total);
       ::fflush(fp);
     }
   }
@@ -497,9 +497,8 @@ void FixClusterCrushDelete::deleteAtoms(const int atoms2move_local) const noexce
 
 /* ---------------------------------------------------------------------- */
 
-int FixClusterCrushDelete::add() const
+int FixClusterCrushDelete::add(const int to_insert) const
 {
-  int warnflag                = 0;
   std::array<double, 3> coord = {0, 0, 0};
 
   // clear ghost count (and atom map) and any ghost bonus data
@@ -538,6 +537,7 @@ int FixClusterCrushDelete::add() const
     int success = 0;
     int attempt = 0;
     while (attempt < maxtry) {
+      success = 0;
       ++attempt;
 
       // generate new position and write it to coord (automatic check against region)
@@ -558,36 +558,31 @@ int FixClusterCrushDelete::add() const
       // check for overlapping
       if (check_overlap(coord) != 0) { continue; }
 
-      // if ok, create atom and generate velocity
       const int placement_flag = placement_check_me(newcoord, sublo, subhi);
-      if (placement_flag != 0) { create_atom(coord, maxtag_all + 1); }
 
       ::MPI_Allreduce(&placement_flag, &success, 1, MPI_INT, MPI_SUM, world);
-
       if (success > 1) { error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, success); }
-#ifdef __NUCC_ALGO_CHECK
-      if ((success == 0) && (comm->me == 0)) {
-        utils::logmesg(lmp, "WARNING: {}: No procs decided to insert a new atom, that seemed to be valid (seems to be a fix bug)\n", style);
+
+      // if ok, create atom and generate velocity
+      if (success != 0) {
+        create_atom(coord, maxtag_all + 1);
+        break;
       }
-#endif    // __NUCC_ALGO_CHECK
-
-      if (success == 1) { break; }
-    }
-
-    // warn if not successful b/c too many attempts
-
-    if ((warnflag != 0) && (success == 0) && (comm->me == 0)) {
-      error->warning(FLERR, "One or more particle depositions were unsuccessful");
-      warnflag = 0;
     }
 
     if (success != 0) {
       ++atom->natoms;
       ++maxtag_all;
       ++ninserted;
-      if (atom->natoms < 0) { error->all(FLERR, "Too many total atoms"); }
-      if (maxtag_all >= MAXTAGINT) { error->all(FLERR, "New atom IDs exceed maximum allowed ID"); }
+      if (atom->natoms < 0) { error->all(FLERR, "{}: Too many total atoms", style); }
+      if (maxtag_all >= MAXTAGINT) { error->all(FLERR, "{}: New atom IDs exceed maximum allowed ID", style); }
     }
+  }
+
+  // warn if not there were unsuccessful insertion attempts
+  const int diff = to_insert - ninserted;
+  if ((diff > 0) && (comm->me == 0)) {
+    error->warning(FLERR, "{}: {} particle depositions were unsuccessful", style, diff);
   }
 
   // rebuild atom map

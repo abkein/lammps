@@ -51,7 +51,7 @@ class FixClusterCrushDelete : public Fix {
   std::array<double, 6> sbonds{};
   std::array<double, 6> vels{};    // [user-defined] velocities to assign to created atoms
   std::array<double, 3> xmid{};
-  int to_insert           = 0;
+  int to_insert_total     = 0;
 
   // user-defined parameters
   int screenflag          = 0;       // [user-defined] whether to output info to screen
@@ -82,7 +82,7 @@ class FixClusterCrushDelete : public Fix {
   void deleteAtoms(const int atoms2move_local) const noexcept(true);
   void postDelete() const noexcept(true);
 
-  [[nodiscard]] int add() const;
+  [[nodiscard]] int add(const int to_insert) const;
   void gen_pos(std::array<double, 3>& coord) const noexcept;
   [[nodiscard]] bool vartest(const std::array<double, 3>& coord) const noexcept;
   [[nodiscard]] int check_overlap(const std::array<double, 3>& coord) const noexcept;
