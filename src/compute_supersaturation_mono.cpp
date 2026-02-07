@@ -57,7 +57,7 @@ ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, ch
   coeffs[2] = utils::numeric(FLERR, arg[7], true, lmp);
 
   int iarg  = 8;
-  char* compute_cluster_temp_id{};
+  std::string compute_cluster_temp_id;
 
   while (iarg < narg) {
     if (::strcmp(arg[iarg], "temp") == 0) {
@@ -66,7 +66,7 @@ ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, ch
         temp_avg = true;
       } else {
         temp_avg                = false;
-        compute_cluster_temp_id = utils::strdup(arg[iarg + 1]);
+        compute_cluster_temp_id = arg[iarg + 1];
       }
       iarg += 2;
     } else {
@@ -79,12 +79,9 @@ ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, ch
     if (temp_computes.empty()) { error->all(FLERR, "{}: Cannot find compute with style 'temp'.", style); }
     compute_temp = temp_computes[0];
   } else {
-    if (compute_cluster_temp_id == nullptr) { error->all(FLERR, "{}: Compute cluster/temp id is null.", style); }
     compute_temp = lmp->modify->get_compute_by_id(compute_cluster_temp_id);
     if (compute_temp == nullptr) { error->all(FLERR, "{}: Cannot find compute with id {}.", style, compute_cluster_temp_id); }
   }
-
-  delete[] compute_cluster_temp_id;
 }
 
 /* ---------------------------------------------------------------------- */
