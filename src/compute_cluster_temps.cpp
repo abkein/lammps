@@ -32,8 +32,9 @@ using namespace LAMMPS_NS;
 ComputeClusterTemp::ComputeClusterTemp(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
 {
   vector_flag = 1;
-  size_vector = 0;
   extvector   = 0;
+  scalar_flag = 1;
+  extscalar   = 0;
 
   if (narg < 5) { utils::missing_cmd_args(FLERR, "compute temp/cluster", error); }
 
@@ -103,7 +104,7 @@ void ComputeClusterTemp::compute_vector()
 double ComputeClusterTemp::compute_scalar()
 {
   invoked_scalar = update->ntimestep;
-  double sum = 0;
+  double sum     = 0;
   for (int i = 0; i < size_cutoff; ++i) { sum += temp[i]; }
   return sum / size_cutoff;
 }
