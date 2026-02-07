@@ -100,7 +100,6 @@ void ComputeClusterKE::init()
 
 void ComputeClusterKE::compute_vector()
 {
-  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   compute_local();
@@ -118,7 +117,6 @@ void ComputeClusterKE::compute_vector()
 
 void ComputeClusterKE::compute_local()
 {
-  if (invoked_local == update->ntimestep) { return; }
   invoked_local = update->ntimestep;
 
   if (compute_cluster_size->invoked_vector != update->ntimestep) { compute_cluster_size->compute_vector(); }

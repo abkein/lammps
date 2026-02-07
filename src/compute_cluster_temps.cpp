@@ -89,7 +89,6 @@ void ComputeClusterTemp::init()
 
 void ComputeClusterTemp::compute_vector()
 {
-  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   if (compute_cluster_ke->invoked_vector != update->ntimestep) { compute_cluster_ke->compute_vector(); }
@@ -103,6 +102,7 @@ void ComputeClusterTemp::compute_vector()
 
 double ComputeClusterTemp::compute_scalar()
 {
+  invoked_scalar = update->ntimestep;
   double sum = 0;
   for (int i = 0; i < size_cutoff; ++i) { sum += temp[i]; }
   return sum / size_cutoff;

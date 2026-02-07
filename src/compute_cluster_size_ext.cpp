@@ -161,7 +161,6 @@ void ComputeClusterSizeExt::init()
 
 void ComputeClusterSizeExt::compute_vector()
 {
-  if (invoked_vector == update->ntimestep) { return; }
   invoked_vector = update->ntimestep;
 
   if (compute_cluster_atom->invoked_peratom != update->ntimestep) { compute_cluster_atom->compute_peratom(); }
@@ -334,7 +333,6 @@ void ComputeClusterSizeExt::compute_vector()
 
 void ComputeClusterSizeExt::compute_peratom()
 {
-  if (invoked_peratom == update->ntimestep) { return; }
   invoked_peratom = update->ntimestep;
 
   if (invoked_vector != update->ntimestep) { compute_vector(); }
