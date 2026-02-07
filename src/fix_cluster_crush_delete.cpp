@@ -38,9 +38,9 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <format>
 #include <functional>
 #include <unordered_map>
-#include <format>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -96,6 +96,7 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
   // Parse optional keywords
   int iarg    = 10;
   int velsset = 0;
+  const char *vstr{}, *xstr{}, *ystr{}, *zstr{};
 
   while (iarg < narg) {
     if (::strcmp(arg[iarg], "maxtry") == 0) {
@@ -113,9 +114,15 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
         atom_temperature = utils::numeric(FLERR, arg[iarg + 2], true, lmp);
         if (atom_temperature < 0) { error->all(FLERR, "{}: Atom temperature cannot be negative", style); }
       } else if (::strcmp(arg[iarg + 1], "track") == 0) {
-        // TODO: Implement temperature track
         temp_fix = false;
-        if (::strcmp(arg[iarg + 2], "avg") == 0) {}
+        if (::strcmp(arg[iarg + 2], "avg") == 0) {
+          temp_size = 0;
+        } else {
+          temp_size = utils::inumeric(FLERR, arg[iarg + 2], true, lmp);
+          if (iarg + 4 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: temp track {}", style, temp_size), error); }
+          compute_cluster_temp = dynamic_cast<ComputeClusterTemp*>(lmp->modify->get_compute_by_id(arg[iarg + 3]));
+          iarg += 1;
+        }
       } else {
         error->all(FLERR, "{}: Unrecognized style of `temp` keyword: {}. Possible values are `fix`, `track`.", style, arg[iarg + 1]);
       }
@@ -227,14 +234,24 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
 
   // further setup and error check
 
-  // Get temp compute
-  auto temp_computes = lmp->modify->get_compute_by_style("temp");
-  if (temp_computes.empty()) { error->all(FLERR, "{}: Cannot find compute with style 'temp'.", style); }
-  compute_temp = temp_computes[0];
   if (atom->mass_setflag[ntype] == 0) { error->all(FLERR, "{}: Atom mass for atom type {} is not set!", style, ntype); }
-  vsigma = ::sqrt(atom_temperature / atom->mass[ntype]);
 
-  if ((!assign_temperature) && (velsset != 3)) { error->all(FLERR, "{}: Either velocities or temperature are not set.", style); }
+  if (assign_temperature) {
+    if (temp_fix) {
+      vsigma = ::sqrt(atom_temperature / atom->mass[ntype]);
+    } else {
+      if (temp_size == 0) {
+        // Get temp compute
+        const auto& temp_computes = lmp->modify->get_compute_by_style("temp");
+        if (temp_computes.empty()) { error->all(FLERR, "{}: Cannot find compute with style 'temp'.", style); }
+        compute_temp = temp_computes[0];
+      }
+    }
+  } else if (velsset != 3) {
+    error->all(FLERR, "{}: Either velocities or temperature are not set.", style);
+  } else {
+    // No way
+  }
 
   sbonds[0] = region->extent_xlo;
   sbonds[1] = region->extent_xhi;
@@ -311,6 +328,10 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
       if (input->variable->internalstyle(vars[2]) == 0) { error->all(FLERR, "{}: Variable {} is invalid style", style, zstr); }
     }
   }
+  delete[] vstr;
+  delete[] xstr;
+  delete[] ystr;
+  delete[] zstr;
 
   if ((comm->me == 0) && (fileflag != 0)) {
     fmt::print(fp, "ntimestep,ntotal,c2c,a2m,moved,a2mn\n");
@@ -335,11 +356,6 @@ FixClusterCrushDelete::~FixClusterCrushDelete() noexcept(true)
 
   delete xrandom;
   delete vrandom;
-
-  delete[] vstr;
-  delete[] xstr;
-  delete[] ystr;
-  delete[] zstr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -430,7 +446,19 @@ void FixClusterCrushDelete::pre_exchange()
   to_insert += atoms2move_total;
   const int to_insert_prev = to_insert;
 
-  if (to_insert > 0) { to_insert -= add(); }
+  if (to_insert > 0) {
+    if (assign_temperature && (!temp_fix)) {
+      if (temp_size == 0) {
+        const double ts_temp = (compute_temp->invoked_scalar != update->ntimestep) ? compute_temp->compute_scalar() : compute_temp->scalar;
+        vsigma               = ::sqrt(ts_temp / atom->mass[ntype]);
+      } else {
+        if (compute_cluster_temp->invoked_vector != update->ntimestep) { compute_cluster_temp->compute_vector(); }
+        vsigma = ::sqrt(compute_cluster_temp->vector[temp_size] / atom->mass[ntype]);
+      }
+    }
+
+    to_insert -= add();
+  }
 
   bigint nblocal = atom->nlocal;
   ::MPI_Allreduce(&nblocal, &atom->natoms, 1, MPI_LMP_BIGINT, MPI_SUM, world);
@@ -472,7 +500,6 @@ void FixClusterCrushDelete::deleteAtoms(const int atoms2move_local) const noexce
 int FixClusterCrushDelete::add() const
 {
   int warnflag                = 0;
-  // double coord[3];
   std::array<double, 3> coord = {0, 0, 0};
 
   // clear ghost count (and atom map) and any ghost bonus data
@@ -487,23 +514,9 @@ int FixClusterCrushDelete::add() const
   const bool is_triclinic   = domain->triclinic == 0;
   const double* const boxlo = is_triclinic ? static_cast<double*>(domain->boxlo) : static_cast<double*>(domain->boxlo_lamda);
   const double* const boxhi = is_triclinic ? static_cast<double*>(domain->boxhi) : static_cast<double*>(domain->boxhi_lamda);
-  // if (is_triclinic) {
-  //   boxlo = static_cast<double*>(domain->boxlo);
-  //   boxhi = static_cast<double*>(domain->boxhi);
-  // } else {
-  //   boxlo = static_cast<double*>(domain->boxlo_lamda);
-  //   boxhi = static_cast<double*>(domain->boxhi_lamda);
-  // }
 
   const double* const sublo = is_triclinic ? static_cast<double*>(domain->sublo) : static_cast<double*>(domain->sublo_lamda);
   const double* const subhi = is_triclinic ? static_cast<double*>(domain->subhi) : static_cast<double*>(domain->subhi_lamda);
-  // if (is_triclinic) {
-  //   sublo = static_cast<double*>(domain->sublo);
-  //   subhi = static_cast<double*>(domain->subhi);
-  // } else {
-  //   sublo = static_cast<double*>(domain->sublo_lamda);
-  //   subhi = static_cast<double*>(domain->subhi_lamda);
-  // }
 
   // find maxid in case other fixes deleted/inserted atoms
 
@@ -533,7 +546,6 @@ int FixClusterCrushDelete::add() const
       // check against variable
       if ((varflag != 0) && vartest(coord)) { continue; }
 
-      // double lamda[3];
       std::array<double, 3> lamda = {0, 0, 0};
       domain->x2lamda(coord.data(), lamda.data());
       const std::array<double, 3>& newcoord = domain->triclinic == 0 ? coord : lamda;
@@ -744,9 +756,9 @@ void FixClusterCrushDelete::postDelete() const noexcept(true)
 
 bool FixClusterCrushDelete::vartest(const std::array<double, 3>& coord) const noexcept
 {
-  if (xstr != nullptr) { input->variable->internal_set(vars[0], coord[0]); }
-  if (ystr != nullptr) { input->variable->internal_set(vars[1], coord[1]); }
-  if (zstr != nullptr) { input->variable->internal_set(vars[2], coord[2]); }
+  input->variable->internal_set(vars[0], coord[0]);
+  input->variable->internal_set(vars[1], coord[1]);
+  input->variable->internal_set(vars[2], coord[2]);
 
   return input->variable->compute_equal(vars[3]) == 0.0;
 }

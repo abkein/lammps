@@ -39,6 +39,7 @@ class FixClusterCrushDelete : public Fix {
   class Region* region                              = nullptr;
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
   class Compute* compute_temp                       = nullptr;
+  class Compute* compute_cluster_temp               = nullptr;
 
   FILE* fp                                          = nullptr;    // file write diagnostics to
   bigint next_step                                  = 0;          // next timestep wake up at
@@ -53,28 +54,29 @@ class FixClusterCrushDelete : public Fix {
   int to_insert           = 0;
 
   // user-defined parameters
-  int screenflag          = 0;    // [user-defined] whether to output info to screen
-  int fileflag            = 1;    // [user-defined] whether to output info into file
-  int scaleflag           = 0;    // [user-defined]
-  int kmax                = 0;    // [user-defined] max size of clusters
-  double overlap          = 0;    // [user-defined] minimum distance to other atoms from the place atom teleports to
-  double overlapsq        = 0;
+  int screenflag          = 0;       // [user-defined] whether to output info to screen
+  int fileflag            = 1;       // [user-defined] whether to output info into file
+  int scaleflag           = 0;       // [user-defined]
+  int kmax                = 0;       // [user-defined] max size of clusters
+  double overlap          = 0;       // [user-defined] minimum distance to other atoms from the place atom teleports to
+  double overlapsq        = 0;       //
   int maxtry              = 1000;    // [user-defined] max attempts to search for a new suitable location
   int ntype               = 0;       // [user-defined] type of atoms to create
   int groupid             = 0;       // [user-defined]
 
   // velocity and coordinates
-  bool assign_temperature = false;    // [user-defined] whether temperature of created atoms should be assigned at creation
-  bool temp_fix           = true;     // [user-defined] whether temperature of created atoms is fixed or tracked // TODO: Implement
-  double atom_temperature = 0;        // [user-defined] temperature of created atoms
-  class RanPark* vrandom  = nullptr;
-  double vsigma           = 0;
-  DIST vdist              = DIST::DIST_GAUSSIAN;
-  class RanPark* xrandom  = nullptr;
-  double xsigma           = 0;
-  DIST xdist              = DIST::DIST_UNIFORM;
+  bool assign_temperature = false;                  // [user-defined] whether temperature of created atoms should be assigned at creation
+  bool temp_fix           = true;                   // [user-defined] whether temperature of created atoms is fixed or tracked
+  int temp_size           = 0;                      // [user-defined] 0 if average, otherwise size
+  double atom_temperature = 0;                      // [user-defined] temperature of created atoms
+  class RanPark* vrandom  = nullptr;                // random generator for velocities
+  double vsigma           = 0;                      // MSD for velocities
+  DIST vdist              = DIST::DIST_GAUSSIAN;    // distribution type for velocities
+  class RanPark* xrandom  = nullptr;                // random generator for coordinates
+  double xsigma           = 0;                      // MSD for coordinates
+  DIST xdist              = DIST::DIST_UNIFORM;     // distribution type for coordinates
+
   int varflag             = 0;
-  char *vstr{}, *xstr{}, *ystr{}, *zstr{};
   std::array<int, 4> vars{};
 
   void deleteAtoms(const int atoms2move_local) const noexcept(true);
