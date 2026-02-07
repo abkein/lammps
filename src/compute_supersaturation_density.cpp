@@ -29,12 +29,11 @@ static constexpr double EPSILON = 1.0e-6;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeSupersaturationDensity::ComputeSupersaturationDensity(LAMMPS *lmp, int narg, char **arg) :
-    Compute(lmp, narg, arg)
+ComputeSupersaturationDensity::ComputeSupersaturationDensity(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
 {
 
   scalar_flag = 1;
-  extscalar = 0;
+  extscalar   = 0;
 
   if (narg < 8) { utils::missing_cmd_args(FLERR, "compute supersaturation/density", error); }
 
@@ -44,26 +43,22 @@ ComputeSupersaturationDensity::ComputeSupersaturationDensity(LAMMPS *lmp, int na
   compute_cluster_size = lmp->modify->get_compute_by_id(arg[3]);
   if (compute_cluster_size == nullptr) {
     error->all(FLERR,
-               "compute supersaturation/density: Cannot find compute with style 'cluster/size' "
+               "{}: Cannot find compute with style 'cluster/size' "
                "with id: {}",
-               arg[4]);
+               style, arg[3]);
   }
 
   // Get kmax
   kmax = utils::inumeric(FLERR, arg[4], true, lmp);
-  if (kmax < 1) {
-    error->all(FLERR, "kmax for compute supersaturation/density cannot be less than 1");
-  }
+  if (kmax < 1) { error->all(FLERR, "{}: kmax cannot be less than 1", style); }
 
   // Arrhenius coeffs
-  coeffs[0] = utils::numeric(FLERR, arg[5], true, lmp);
-  coeffs[1] = utils::numeric(FLERR, arg[6], true, lmp);
-  coeffs[2] = utils::numeric(FLERR, arg[7], true, lmp);
+  coeffs[0]                 = utils::numeric(FLERR, arg[5], true, lmp);
+  coeffs[1]                 = utils::numeric(FLERR, arg[6], true, lmp);
+  coeffs[2]                 = utils::numeric(FLERR, arg[7], true, lmp);
 
-  auto temp_computes = lmp->modify->get_compute_by_style("temp");
-  if (temp_computes.empty()) {
-    error->all(FLERR, "compute supersaturation/density: Cannot find compute with style 'temp'.");
-  }
+  const auto& temp_computes = lmp->modify->get_compute_by_style("temp");
+  if (temp_computes.empty()) { error->all(FLERR, "{}: Cannot find compute with style 'temp'.", style); }
   compute_temp = temp_computes[0];
 }
 
@@ -75,9 +70,7 @@ ComputeSupersaturationDensity::~ComputeSupersaturationDensity() noexcept(true) =
 
 void ComputeSupersaturationDensity::init()
 {
-  if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) {
-    error->warning(FLERR, "More than one compute {}", style);
-  }
+  if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -86,12 +79,10 @@ double ComputeSupersaturationDensity::compute_scalar()
 {
   invoked_scalar = update->ntimestep;
 
-  if (compute_cluster_size->invoked_vector != update->ntimestep) {
-    compute_cluster_size->compute_vector();
-  }
+  if (compute_cluster_size->invoked_vector != update->ntimestep) { compute_cluster_size->compute_vector(); }
   if (compute_temp->invoked_scalar != update->ntimestep) { compute_temp->compute_scalar(); }
 
-  const double *dist = compute_cluster_size->vector;
+  const double* const dist = compute_cluster_size->vector;
   double sum = 0;
   for (int size = 1; size <= kmax; ++size) { sum += size * dist[size]; }
 

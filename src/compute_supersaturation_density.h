@@ -24,23 +24,25 @@ ComputeStyle(supersaturation/density,ComputeSupersaturationDensity);
 
 #include "compute.h"
 
+#include <array>
+
 namespace LAMMPS_NS {
 
 class ComputeSupersaturationDensity : public Compute {
  public:
-  ComputeSupersaturationDensity(class LAMMPS *lmp, int narg, char **arg);
+  ComputeSupersaturationDensity(class LAMMPS* lmp, int narg, char** arg);
   ~ComputeSupersaturationDensity() noexcept(true) override;
   void init() override;
   double compute_scalar() override;
 
  private:
-  Compute *compute_cluster_size = nullptr;
-  Compute *compute_temp = nullptr;
+  Compute* compute_cluster_size = nullptr;
+  Compute* compute_temp         = nullptr;
 
-  double coeffs[3]{};
-  int kmax;    // max cluster size considered a vapor
+  std::array<double, 3> coeffs{0,0,0};
+  int kmax = 0;    // max cluster size considered a vapor
 
-  double execute_func() const;    // number density at saturation curve
+  [[nodiscard]] double execute_func() const;    // number density at saturation curve
 };
 
 }    // namespace LAMMPS_NS

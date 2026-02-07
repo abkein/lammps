@@ -22,36 +22,40 @@ ComputeStyle(supersaturation/mono,ComputeSupersaturationMono);
 #ifndef LMP_COMPUTE_SUPERSATURATION_MONO_H
 #define LMP_COMPUTE_SUPERSATURATION_MONO_H
 
-#include "compute_cluster_temps.h"
 #include "compute.h"
-#include "region.h"
+#include "nucc_cspan.hpp"
+
+#include <array>
 
 namespace LAMMPS_NS {
 
 class ComputeSupersaturationMono : public Compute {
  public:
-  ComputeSupersaturationMono(class LAMMPS *lmp, int narg, char **arg);
+  ComputeSupersaturationMono(class LAMMPS* lmp, int narg, char** arg);
   ~ComputeSupersaturationMono() noexcept(true) override;
   void init() override;
   double compute_scalar() override;
   void compute_local() override;
   double memory_usage() override;
 
-  double local_scalar;            // local supersaturation
-  int local_monomers;             // number of local monomers
-  bigint global_monomers{};       // number of global monomers
-  double execute_func() const;    // monomer number density at saturation curve
-  int *mono_idx{};                // ids of local monomers
-
  private:
-  Region *region = nullptr;
-  Compute *compute_neighs = nullptr;
-  Compute *compute_temp = nullptr;
-  ComputeClusterTemp *compute_cltemp = nullptr;
+  class Region* region                     = nullptr;
+  Compute* compute_neighs                  = nullptr;
+  Compute* compute_temp                    = nullptr;
+  class ComputeClusterTemp* compute_cltemp = nullptr;
 
-  bool use_t1;
-  int nloc{};    // number of elements in mono_idx
-  double coeffs[3]{};
+  std::array<double, 3> coeffs{0, 0, 0};    // [user-defined] arrhenius coefficients
+  bool use_t1            = false;           // [user-defined] use monomer temperature instead of average
+
+  double local_scalar    = 0;    // local supersaturation
+  int local_monomers     = 0;    // number of local monomers
+  bigint global_monomers = 0;    // number of global monomers
+  int nloc               = 0;    // number of elements in mono_idx
+
+  NUCC::cspan<int> mono_idx;    // ids of local monomers
+   //   int* mono_idx{};    // ids of local monomers
+
+  [[nodiscard]] double execute_func() const;    // monomer number density at saturation curve
 };
 
 }    // namespace LAMMPS_NS
