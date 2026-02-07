@@ -564,14 +564,14 @@ int FixClusterCrushDelete::add() const
 
       ::MPI_Allreduce(&placement_flag, &success, 1, MPI_INT, MPI_SUM, world);
 
+      if (success > 1) { error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, success); }
 #ifdef __NUCC_ALGO_CHECK
-      if (flagsum > 1) { error->all(FLERR, "{}: Multiple procs ({} procs) tried to insert an atom (seems to be a fix bug)", style, flagsum); }
-// if ((flagsum == 0) && (comm->me == 0)) {
-//   utils::logmesg(lmp, "WARNING: {}: No procs decided to insert a new atom, that seemed to be valid (seems to be a fix bug)\n", style);
-// }
+      if ((success == 0) && (comm->me == 0)) {
+        utils::logmesg(lmp, "WARNING: {}: No procs decided to insert a new atom, that seemed to be valid (seems to be a fix bug)\n", style);
+      }
 #endif    // __NUCC_ALGO_CHECK
 
-      break;
+      if (success == 1) { break; }
     }
 
     // warn if not successful b/c too many attempts
