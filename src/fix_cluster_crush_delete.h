@@ -40,6 +40,7 @@ class FixClusterCrushDelete : public Fix {
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
   class Compute* compute_temp                       = nullptr;
   class Compute* compute_cluster_temp               = nullptr;
+  class Compute* compute_ss_mono                    = nullptr;
 
   FILE* fp                                          = nullptr;    // file write diagnostics to
   bigint next_step                                  = 0;          // next timestep wake up at
@@ -51,18 +52,21 @@ class FixClusterCrushDelete : public Fix {
   std::array<double, 6> sbonds{};
   std::array<double, 6> vels{};    // [user-defined] velocities to assign to created atoms
   std::array<double, 3> xmid{};
-  int to_insert_total     = 0;
+  int balance             = 0;
 
   // user-defined parameters
-  int screenflag          = 0;       // [user-defined] whether to output info to screen
-  int fileflag            = 1;       // [user-defined] whether to output info into file
-  int scaleflag           = 0;       // [user-defined]
-  int kmax                = 0;       // [user-defined] max size of clusters
-  double overlap          = 0;       // [user-defined] minimum distance to other atoms from the place atom teleports to
-  double overlapsq        = 0;       //
-  int maxtry              = 1000;    // [user-defined] max attempts to search for a new suitable location
-  int ntype               = 0;       // [user-defined] type of atoms to create
-  int groupid             = 0;       // [user-defined]
+  int screenflag          = 0;        // [user-defined] whether to output info to screen
+  int fileflag            = 1;        // [user-defined] whether to output info into file
+  int scaleflag           = 0;        // [user-defined]
+  int kmax                = 0;        // [user-defined] max size of clusters
+  double overlap          = 0;        // [user-defined] minimum distance to other atoms from the place atom teleports to
+  double overlapsq        = 0;        //
+  int maxtry              = 1000;     // [user-defined] max attempts to search for a new suitable location
+  int ntype               = 0;        // [user-defined] type of atoms to create
+  int groupid             = 0;        // [user-defined]
+  bool keep_ss            = false;    // [user-defined] whether to keep mono supersaturation
+  double supersaturation  = 0;        // [user-defined] desired mono supersaturation
+  int insertion_rate      = 0;        // [user-defined] allow this many insertions per period (`nevery`). Zero if unlimited.
 
   // velocity and coordinates
   bool assign_temperature = false;                  // [user-defined] whether temperature of created atoms should be assigned at creation

@@ -45,8 +45,6 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-constexpr int DEFAULT_MAXTRY = 1000;
-
 /* ---------------------------------------------------------------------- */
 
 FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) : Fix(lmp, narg, arg)
@@ -158,7 +156,18 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
         fileflag = 1;
       }
       iarg += 2;
-
+    } else if (::strcmp(arg[iarg], "rate") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: rate", style), error); }
+      insertion_rate = utils::inumeric(FLERR, arg[iarg + 1], true, lmp);
+      iarg += 2;
+    } else if (::strcmp(arg[iarg], "keep_ss") == 0) {
+      if (iarg + 3 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: keep_ss", style), error); }
+      supersaturation = utils::numeric(FLERR, arg[iarg + 1], true, lmp);
+      compute_ss_mono = lmp->modify->get_compute_by_id(arg[iarg + 2]);
+      if (compute_ss_mono == nullptr) {
+        error->all(FLERR, "{}: Cannot find compute of style 'supersaturation/mono' with id: {}", style, arg[iarg + 2]);
+      }
+      iarg += 3;
     } else if (::strcmp(arg[iarg], "nevery") == 0) {
       if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: nevery", style), error); }
       // Get execution period
@@ -337,9 +346,6 @@ FixClusterCrushDelete::FixClusterCrushDelete(LAMMPS* lmp, int narg, char** arg) 
     fmt::print(fp, "ntimestep,ntotal,c2c,a2m,moved,a2mn\n");
     ::fflush(fp);
   }
-
-  count_a2m.create(memory, comm->nprocs, "cluster/crush/delete:count_a2m");
-  count_c2c.create(memory, comm->nprocs, "cluster/crush/delete:count_c2c");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -366,10 +372,11 @@ void FixClusterCrushDelete::init()
   if (domain->dimension != 3) { error->all(FLERR, "{}: Can work only in 3D.", style); }
   if (atom->molecular != Atom::ATOMIC) { error->all(FLERR, "{}: Cannot use with molecular systems (atom deletion does not update topology)", style); }
 
-  if ((ids_a2m.empty()) || (nloc < atom->nlocal)) {
-    nloc = atom->nlocal;
-    ids_a2m.grow(memory, nloc, "cluster/crush/delete:ids_a2m");
-  }
+  count_a2m.create(memory, comm->nprocs, "cluster/crush/delete:count_a2m");
+  count_c2c.create(memory, comm->nprocs, "cluster/crush/delete:count_c2c");
+
+  nloc = atom->nlocal;
+  ids_a2m.grow(memory, nloc, "cluster/crush/delete:ids_a2m");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -443,10 +450,10 @@ void FixClusterCrushDelete::pre_exchange()
 
   if (clusters2crush_total > 0) { deleteAtoms(atoms2move_local); }
 
-  to_insert_total += atoms2move_total;
-  const int to_insert_prev = to_insert_total;
+  balance += atoms2move_total;
+  const int to_insert_prev = balance;
 
-  if (to_insert_total > 0) {
+  if (balance > 0) {
     if (assign_temperature && (!temp_fix)) {
       if (temp_size == 0) {
         const double ts_temp = (compute_temp->invoked_scalar != update->ntimestep) ? compute_temp->compute_scalar() : compute_temp->scalar;
@@ -457,7 +464,7 @@ void FixClusterCrushDelete::pre_exchange()
       }
     }
 
-    to_insert_total -= add(1);
+    balance -= add(insertion_rate > 0 ? insertion_rate : balance);
   }
 
   bigint nblocal = atom->nlocal;
@@ -467,8 +474,8 @@ void FixClusterCrushDelete::pre_exchange()
     // print status
     if (screenflag != 0) { utils::logmesg(lmp, "Crushed {} clusters -> deleted {} atoms.\n", clusters2crush_total, atoms2move_total); }
     if (fileflag != 0) {
-      utils::print(fp, "{},{},{},{},{},{}\n", update->ntimestep, atom->natoms, clusters2crush_total, atoms2move_total,
-                   to_insert_prev - to_insert_total, to_insert_total);
+      utils::print(fp, "{},{},{},{},{},{}\n", update->ntimestep, atom->natoms, clusters2crush_total, atoms2move_total, to_insert_prev - balance,
+                   balance);
       ::fflush(fp);
     }
   }
@@ -510,12 +517,12 @@ int FixClusterCrushDelete::add(const int to_insert) const
   atom->nghost = 0;
   atom->avec->clear_bonus();
 
-  const bool is_triclinic   = domain->triclinic == 0;
-  const double* const boxlo = is_triclinic ? static_cast<double*>(domain->boxlo) : static_cast<double*>(domain->boxlo_lamda);
-  const double* const boxhi = is_triclinic ? static_cast<double*>(domain->boxhi) : static_cast<double*>(domain->boxhi_lamda);
+  const bool not_triclinic  = domain->triclinic == 0;
+  const double* const boxlo = not_triclinic ? static_cast<double*>(domain->boxlo) : static_cast<double*>(domain->boxlo_lamda);
+  const double* const boxhi = not_triclinic ? static_cast<double*>(domain->boxhi) : static_cast<double*>(domain->boxhi_lamda);
 
-  const double* const sublo = is_triclinic ? static_cast<double*>(domain->sublo) : static_cast<double*>(domain->sublo_lamda);
-  const double* const subhi = is_triclinic ? static_cast<double*>(domain->subhi) : static_cast<double*>(domain->subhi_lamda);
+  const double* const sublo = not_triclinic ? static_cast<double*>(domain->sublo) : static_cast<double*>(domain->sublo_lamda);
+  const double* const subhi = not_triclinic ? static_cast<double*>(domain->subhi) : static_cast<double*>(domain->subhi_lamda);
 
   // find maxid in case other fixes deleted/inserted atoms
 
@@ -581,9 +588,7 @@ int FixClusterCrushDelete::add(const int to_insert) const
 
   // warn if not there were unsuccessful insertion attempts
   const int diff = to_insert - ninserted;
-  if ((diff > 0) && (comm->me == 0)) {
-    error->warning(FLERR, "{}: {} particle depositions were unsuccessful", style, diff);
-  }
+  if ((diff > 0) && (comm->me == 0)) { error->warning(FLERR, "{}: {} particle depositions were unsuccessful", style, diff); }
 
   // rebuild atom map
 
