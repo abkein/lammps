@@ -36,6 +36,7 @@ class ComputeSupersaturationMono : public Compute {
   void init() override;
   double compute_scalar() override;
   void compute_local() override;
+  void compute_vector() override;
   double memory_usage() override;
 
  private:
@@ -50,6 +51,8 @@ class ComputeSupersaturationMono : public Compute {
   int local_monomers     = 0;    // number of local monomers
   bigint global_monomers = 0;    // number of global monomers
   int nloc               = 0;    // number of elements in mono_idx
+
+  std::array<double, 4> data{0.0, 0.0, 0.0, 0.0};
 
   NUCC::cspan<int> mono_idx;    // ids of local monomers
 
