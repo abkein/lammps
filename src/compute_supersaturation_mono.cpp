@@ -38,8 +38,8 @@ ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, ch
   scalar_flag = 1;
   extscalar   = 0;
   local_flag  = 1;
-  vector_flag = 1;
-  extvector   = 1;
+  size_local_cols = 0;
+  size_local_rows = 4;
 
   if (narg < 8) { utils::missing_cmd_args(FLERR, "compute supersaturation/mono", error); }
 
@@ -59,17 +59,16 @@ ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, ch
   coeffs[2] = utils::numeric(FLERR, arg[7], true, lmp);
 
   int iarg  = 8;
-  std::string compute_cluster_temp_id;
 
   while (iarg < narg) {
     if (::strcmp(arg[iarg], "temp") == 0) {
       if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: temp", style), error); }
-      if (::strcmp(arg[iarg + 1], "avg") == 0) {
-        temp_avg = true;
-      } else {
-        temp_avg                = false;
-        compute_cluster_temp_id = arg[iarg + 1];
-      }
+      temp_avg = ::strcmp(arg[iarg + 1], "avg") == 0;
+      iarg += 2;
+    } else if (::strcmp(arg[iarg], "temp_compute") == 0) {
+      if (iarg + 2 > narg) { utils::missing_cmd_args(FLERR, std::format("{}: temp_compute", style), error); }
+      compute_temp = lmp->modify->get_compute_by_id(arg[iarg + 1]);
+      if (compute_temp == nullptr) { error->all(FLERR, "{}: Cannot find compute with id {}.", style, arg[iarg + 1]); }
       iarg += 2;
     } else {
       error->all(FLERR, "{}: Uknown option {}", style, arg[iarg]);
@@ -81,11 +80,10 @@ ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, ch
     if (temp_computes.empty()) { error->all(FLERR, "{}: Cannot find compute with style 'temp'.", style); }
     compute_temp = temp_computes[0];
   } else {
-    compute_temp = lmp->modify->get_compute_by_id(compute_cluster_temp_id);
-    if (compute_temp == nullptr) { error->all(FLERR, "{}: Cannot find compute with id {}.", style, compute_cluster_temp_id); }
+    if (compute_temp == nullptr) { error->all(FLERR, "{}: Compute cluster/temp is not set.", style); }
   }
 
-  vector = data.data();
+  vector_local = data.data();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -103,15 +101,6 @@ void ComputeSupersaturationMono::init()
 
   nloc = atom->nlocal;
   mono_idx.grow(memory, nloc, "compute supersaturation/mono:mono_idx");
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ComputeSupersaturationMono::compute_vector()
-{
-  invoked_vector = update->ntimestep;
-
-  if (invoked_scalar != update->ntimestep) { compute_scalar(); }
 }
 
 /* ---------------------------------------------------------------------- */

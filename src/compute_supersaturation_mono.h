@@ -36,7 +36,6 @@ class ComputeSupersaturationMono : public Compute {
   void init() override;
   double compute_scalar() override;
   void compute_local() override;
-  void compute_vector() override;
   double memory_usage() override;
 
  private:
