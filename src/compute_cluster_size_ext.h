@@ -49,6 +49,7 @@ class ComputeClusterSizeExt : public Compute {
   void init() override;
   void compute_vector() override;
   void compute_peratom() override;
+  void compute_local() override;
   double memory_usage() override;
 
   constexpr int get_size_cutoff() const noexcept(true) { return size_cutoff; }
@@ -60,10 +61,7 @@ class ComputeClusterSizeExt : public Compute {
   //   inline constexpr const NUCC::Map_t<int, NUCC::Vec_t<int>> *get_cIDs_by_size_my() const noexcept { return cIDs_by_size; }
   constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size_global() const noexcept(true) { return clid_by_size_global; }
   //   inline constexpr const NUCC::Map_t<int, NUCC::Vec_t<int>> *get_cIDs_by_size() const noexcept { return cIDs_by_size_all; }
-  constexpr NUCC::cspan<const NUCC::cluster_data> get_clusters() const noexcept(true)
-  {
-    return NUCC::cspan<const NUCC::cluster_data>(clusters);
-  }
+  constexpr NUCC::cspan<const NUCC::cluster_data> get_clusters() const noexcept(true) { return NUCC::cspan<const NUCC::cluster_data>(clusters); }
 
  private:
   int size_cutoff;    // number of elements reserved in resulting distribution, i.e. the max size of cluster distribution will be built to
@@ -84,22 +82,22 @@ class ComputeClusterSizeExt : public Compute {
   std::unordered_map<int, std::vector<int>> clid_by_size_global;    // don't know if it's usable at all, maybe delete
 
   int nloc = 0;                                // possible count of clusters (nlocal*damp), size of allocated arrays
-  NUCC::cspan<double> dist;                    // cluster size distribution (vector == dist)
-  NUCC::cspan<double> dist_local;              // local cluster size distribution
+  NUCC::cspan<double> dist;                    // int, cluster size distribution (vector == dist)
+  NUCC::cspan<double> dist_local;              // int, local cluster size distribution
   int nc_global = 0;                           // actual number of clusters (across all procs)
   NUCC::cspan<int> counts_global;              // counts for MPI communication
   NUCC::cspan<int> displs;                     // displacements for MPI communication
   NUCC::cspan<NUCC::cluster_data> clusters;    // cluster data
   NUCC::cspan<NUCC::cldata>
-      ns;    // array of cluster ids and their sizes. same as `clusters`, but containing reduced data; used to communicate with other procs
+      ns;    // array of cluster ids and their sizes. same as `clusters`, but containing less data; used to communicate with other procs
   NUCC::cspan<NUCC::cldata> gathered;
-  NUCC::cspan<double> peratom_size;    // size of cluster this atom belongs to
+  NUCC::cspan<double> peratom_size;    // int, size of cluster this atom belongs to
   bigint nloc_gather = 0;
   int nonexclusive   = 0;    // number of clusters not owned by this proc
   int nloc_peratom   = 0;    // number of elements allocated for peratom array
 
-  NUCC::cspan<int> monomers;            // local indices of monomers
-  int nmono                     = 0;    // number of monomers
+  int nmono          = 0;       // number of local monomers
+  NUCC::cspan<double> monomers;    // int, local indices of monomers
 
   Compute* compute_cluster_atom = nullptr;
 

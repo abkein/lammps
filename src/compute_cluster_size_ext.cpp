@@ -39,6 +39,11 @@ ComputeClusterSizeExt::ComputeClusterSizeExt(LAMMPS* lmp, int narg, char** arg) 
   size_vector_variable = 1;
 
   peratom_flag         = 1;
+  size_peratom_cols    = 0;
+
+  local_flag           = 1;
+  size_local_cols      = 1;
+  size_local_rows      = 0;
 
   if (comm->nprocs > LMP_NUCC_CLUSTER_MAX_OWNERS) {
     error->all(FLERR, "{}: Number of processor exceeds MAX_OWNER limit. Recompile with higher MAX_OWNER limit.", style);
@@ -123,36 +128,29 @@ void ComputeClusterSizeExt::init()
   clid_by_size.reserve(size_cutoff);
   clid_by_size_global.reserve(size_cutoff);
 
-  if ((nloc < atom->nlocal) || (ns.empty() && clusters.empty() && monomers.empty())) {
-    nloc = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
-    cluster_map.reserve(nloc);
+  nloc = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
+  cluster_map.reserve(nloc);
 
-    // keeper1->pool_size<MapMember_t<int, int>>(nloc);
-    // keeper2->pool_size<MapMember_t<int, Vec_t<int>>>(nloc);
-    // keeper3->pool_size<MapMember_t<int, Vec_t<int>>>(nloc);
+  // keeper1->pool_size<MapMember_t<int, int>>(nloc);
+  // keeper2->pool_size<MapMember_t<int, Vec_t<int>>>(nloc);
+  // keeper3->pool_size<MapMember_t<int, Vec_t<int>>>(nloc);
 
-    clusters.grow(memory, nloc, "size/cluster/ext:clusters");
-    ns.grow(memory, nloc, "size/cluster/ext:ns");
-    monomers.grow(memory, nloc, "size/cluster/ext:monomers");
-    monomers.reset();
-    ns.reset_unsafe<int>(0);
-    for (int i = 0; i < nloc; ++i) { clusters[i] = cluster_data(); }
-  }
+  clusters.grow(memory, nloc, "size/cluster/ext:clusters");
+  ns.grow(memory, nloc, "size/cluster/ext:ns");
+  monomers.grow(memory, nloc, "size/cluster/ext:monomers");
+  monomers.reset();
+  vector_local = monomers.data();
+  ns.reset_unsafe<int>(0);
+  for (int i = 0; i < nloc; ++i) { clusters[i] = cluster_data(); }
 
-  if (ns.empty() || clusters.empty() || monomers.empty()) { error->one(FLERR, "{}: Inconsistent arrays state", style); }
+  nloc_gather = static_cast<bigint>(static_cast<long double>(atom->natoms) * LMP_NUCC_ALLOC_COEFF);
+  gathered.grow(memory, nloc_gather, "size/cluster/ext:gathered");
+  gathered.reset_unsafe<int>(0);
 
-  if ((gathered.empty()) || (nloc_gather < atom->natoms)) {
-    nloc_gather = static_cast<bigint>(static_cast<long double>(atom->natoms) * LMP_NUCC_ALLOC_COEFF);
-    gathered.grow(memory, nloc_gather, "size/cluster/ext:gathered");
-    gathered.reset_unsafe<int>(0);
-  }
-
-  if ((peratom_size.empty()) || (nloc_peratom < atom->nlocal)) {
-    nloc_peratom = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
-    peratom_size.grow(memory, nloc_peratom, "size/cluster/ext:peratom");
-    peratom_size.reset();
-    vector_atom = peratom_size.data();
-  }
+  nloc_peratom = static_cast<int>(atom->nlocal * LMP_NUCC_ALLOC_COEFF);
+  peratom_size.grow(memory, nloc_peratom, "size/cluster/ext:peratom");
+  peratom_size.reset();
+  vector_atom = peratom_size.data();
 
   initialized_flag = 1;
 }
@@ -186,6 +184,7 @@ void ComputeClusterSizeExt::compute_vector()
 
     monomers.grow(memory, nloc, "size/cluster/ext:monomers");
     monomers.reset();
+    vector_local = monomers.data();
   }
 
   // Finds all the clusters, add atoms
@@ -224,13 +223,13 @@ void ComputeClusterSizeExt::compute_vector()
   // Fill `ns` for communication
   for (const auto& [clid, clidx] : cluster_map) {
     ns[clidx] = cldata(clid, clusters[clidx].l_size);
-    #ifdef __NUCC_ALGO_CHECK
+#ifdef __NUCC_ALGO_CHECK
     cluster_data& clstr      = clusters[clidx];
     const auto cluster_atoms = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) {
       if (!(cluster_atoms[i] < atom->nlocal)) { error->one(FLERR, "{}@{}: particle index exceeds nlocal", style, comm->me); }
     }
-    #endif    // __NUCC_ALGO_CHECK
+#endif    // __NUCC_ALGO_CHECK
   }
 
   // communicate about number of unique clusters
@@ -278,12 +277,12 @@ void ComputeClusterSizeExt::compute_vector()
   for (const auto& [clid, clidx] : cluster_map) {
     const cluster_data& clstr = clusters[clidx];
 
-    #ifdef __NUCC_ALGO_CHECK
+#ifdef __NUCC_ALGO_CHECK
     const auto clatoms = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) {
       if (!(clatoms[i] < atom->nlocal)) { error->one(FLERR, "{}@{}: particle index exceeds nlocal", style, comm->me); }
     }
-    #endif    // __NUCC_ALGO_CHECK
+#endif    // __NUCC_ALGO_CHECK
 
     if ((clstr.g_size < size_cutoff) && (clstr.g_size > 1)) { clid_by_size_global[clstr.g_size].push_back(clidx); }
     if (clstr.host == comm->me) {
@@ -296,10 +295,11 @@ void ComputeClusterSizeExt::compute_vector()
     }
     if (clstr.nowners > 0) { ++nonexclusive; }
   }
+  size_local_rows = nmono;
 
   ::MPI_Allreduce(dist_local.data(), dist.data(), size_vector, MPI_DOUBLE, MPI_SUM, world);
 
-  #ifdef __NUCC_ALGO_CHECK
+#ifdef __NUCC_ALGO_CHECK
   for (const auto& [clid, clidx] : cluster_map) {
     const auto& clstr = clusters[clidx];
     if (clstr.clid != clid) { error->one(FLERR, "{}@{}: Cluster ID does not equals to map ID", style, comm->me); }
@@ -326,7 +326,7 @@ void ComputeClusterSizeExt::compute_vector()
     }
   }
   if (comm->me == 0) { utils::logmesg(lmp, "{}: {}: Check passed\n", style, update->ntimestep); }
-  #endif    // __NUCC_ALGO_CHECK
+#endif    // __NUCC_ALGO_CHECK
 }
 
 /* ---------------------------------------------------------------------- */
@@ -349,6 +349,15 @@ void ComputeClusterSizeExt::compute_peratom()
     const auto cluster_atoms  = clstr.atoms();
     for (int i = 0; i < clstr.l_size; ++i) { peratom_size[cluster_atoms[i]] = clstr.g_size; }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ComputeClusterSizeExt::compute_local()
+{
+  invoked_local = update->ntimestep;
+
+  if (invoked_vector != update->ntimestep) { compute_vector(); }
 }
 
 /* ----------------------------------------------------------------------
