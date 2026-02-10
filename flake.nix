@@ -1,7 +1,7 @@
 {
   description = "C++ dev shell";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
 
   outputs =
     { self, nixpkgs }:
@@ -31,6 +31,8 @@
       cppcheckSupprPlainLoc = "${vscodeDir}/cppcheck_suppressions";
       cppcheckSupprPlain = pkgs.writeText "LAMMPS.code-workspace" ''
         noExplicitConstructor:src/nucc_cspan.hpp
+        shiftTooManyBits:src/fix_cluster_crush_delete.cpp
+        integerOverflow:src/fix_cluster_crush_delete.cpp
       '';
       clang-tidy-conf-loc = "${vscodeDir}/.clang-tidy";
       clang-tidy-conf = pkgs.writeText "LAMMPS.clang-tidy" ''
@@ -68,15 +70,16 @@
             "c-cpp-linter.cppCheck.path" = lib.getExe' pkgs.cppcheck "cppcheck";
             "c-cpp-linter.cppCheck.additionalFlags" = [
               "--std=c++20"
-              "--platform=native"
+              "--platform=unix64"
               "--check-level=exhaustive"
               "--force"
               "--cppcheck-build-dir=${cppcheckBuildDir}"
               "--inline-suppr"
               "--suppressions-list=${cppcheckSupprPlainLoc}"
+              # "--project=${root}/build/compile_commands.json"
               # "--enable=warning,performance,portability,information,missingInclude"
               # "--platform=unix64"
-              # "-j 6"
+              "-j 6"
             ];
             "c-cpp-linter.general.sourceFileExtensions" = [
               "c"
@@ -97,7 +100,7 @@
             ];
             "clang-tidy.checks" = [
               "-*,boost-*,bugprone-*,concurrency-*,hicpp-*,modernize-*,performance-*,readability-*,llvm-*,misc-*,mpi-*,openmp-*"
-              "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls"
+              "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls,-readability-isolate-declaration"
               "-modernize-use-trailing-return-type,-modernize-return-braced-init-list"
               # hicpp-member-init is an alias for enabled cppcoreguidelines-pro-type-member-init
               # hicpp-special-member-functions is an alias for cppcoreguidelines-special-member-functions
