@@ -175,10 +175,10 @@ void FixClusterDelete::pre_exchange()
   // Count amount of local clusters to delete
   int clusters2delete_local = 0;
   // Count amount of local atoms to delete
-  int atoms2delete_local     = 0;
+  int atoms2delete_local    = 0;
 
-  const int nclusters      = compute_cluster_size->get_cluster_map().size();
-  const auto& clusters     = compute_cluster_size->get_clusters();
+  const int nclusters       = compute_cluster_size->get_cluster_map().size();
+  const auto& clusters      = compute_cluster_size->get_clusters();
   for (int i = 0; i < nclusters; ++i) {
     const auto& cluster = clusters[i];
     if (cluster.g_size > kmax) {
@@ -202,7 +202,7 @@ void FixClusterDelete::pre_exchange()
   ::MPI_Allgather(&clusters2delete_local, 1, MPI_INT, count_c2c.data(), 1, MPI_INT, world);
   ::MPI_Allgather(&atoms2delete_local, 1, MPI_INT, count_a2m.data(), 1, MPI_INT, world);
 
-  int atoms2delete_total     = 0;
+  int atoms2delete_total    = 0;
   int clusters2delete_total = 0;
   for (int proc = 0; proc < comm->nprocs; ++proc) {
     atoms2delete_total += count_a2m[proc];

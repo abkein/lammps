@@ -22,8 +22,6 @@ FixStyle(cluster/crush/delete,FixClusterCrushDelete);
 #include <cstdint>
 #include <cstdio>
 
-enum class DIST : uint8_t { DIST_UNIFORM, DIST_GAUSSIAN };
-
 namespace LAMMPS_NS {
 class FixClusterCrushDelete : public Fix {
  public:
@@ -34,7 +32,7 @@ class FixClusterCrushDelete : public Fix {
   void pre_exchange() override;
 
  protected:
-  // necessary things for computation
+  enum class DIST : uint8_t { DIST_UNIFORM, DIST_GAUSSIAN };
 
   class Region* region                              = nullptr;
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;

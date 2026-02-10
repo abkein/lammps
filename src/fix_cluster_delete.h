@@ -21,8 +21,6 @@ FixStyle(cluster/delete,FixClusterDelete);
 #include <cstdint>
 #include <cstdio>
 
-enum class DIST : uint8_t { DIST_UNIFORM, DIST_GAUSSIAN };
-
 namespace LAMMPS_NS {
 class FixClusterDelete : public Fix {
  public:
@@ -44,9 +42,9 @@ class FixClusterDelete : public Fix {
   NUCC::cspan<int> count_c2c;                               // number of clusters to crush per rank [comm->nprocs]
 
   // user-defined parameters
-  int screenflag          = 0;        // [user-defined] whether to output info to screen
-  int fileflag            = 1;        // [user-defined] whether to output info into file
-  int kmax                = 0;        // [user-defined] max size of clusters
+  int screenflag = 0;    // [user-defined] whether to output info to screen
+  int fileflag   = 1;    // [user-defined] whether to output info into file
+  int kmax       = 0;    // [user-defined] max size of clusters
 
   void deleteAtoms(const int to_delete) const noexcept(true);
 };

@@ -22,7 +22,6 @@ FixStyle(supersaturation/mono/ext,FixSupersaturationMonoExt);
 #include <cstdint>
 #include <cstdio>
 
-enum class DIST : uint8_t { DIST_UNIFORM, DIST_GAUSSIAN };
 
 namespace LAMMPS_NS {
 class FixSupersaturationMonoExt : public Fix {
@@ -34,18 +33,18 @@ class FixSupersaturationMonoExt : public Fix {
   void pre_exchange() override;
 
  protected:
-  // necessary things for computation
+  enum class DIST : uint8_t { DIST_UNIFORM, DIST_GAUSSIAN };
 
-  class Region* region                              = nullptr;
+  class Region* region                = nullptr;
   class Compute* compute_cluster_size = nullptr;
-  class Compute* compute_temp                       = nullptr;
-  class Compute* compute_ss_mono                    = nullptr;
+  class Compute* compute_temp         = nullptr;
+  class Compute* compute_ss_mono      = nullptr;
 
-  FILE* fp                                          = nullptr;    // file write diagnostics to
-  bigint next_step                                  = 0;          // next timestep wake up at
+  FILE* fp                            = nullptr;    // file write diagnostics to
+  bigint next_step                    = 0;          // next timestep wake up at
 
-  int nloc                                          = 0;    // number of elements allocated in arrays, ~atom->nlocal
-  NUCC::cspan<int> ids_a2m;                                 // local ids of atoms to move
+  int nloc                            = 0;    // number of elements allocated in arrays, ~atom->nlocal
+  NUCC::cspan<int> ids_a2m;                   // local ids of atoms to move
   std::array<double, 6> sbonds{};
   std::array<double, 6> vels{};    // [user-defined] velocities to assign to created atoms
   std::array<double, 3> xmid{};
