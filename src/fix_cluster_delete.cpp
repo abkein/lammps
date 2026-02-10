@@ -46,23 +46,23 @@ FixClusterDelete::FixClusterDelete(LAMMPS* lmp, int narg, char** arg) : Fix(lmp,
   restart_pbc = 1;
   nevery      = 1;
 
-  if (narg < 9) { utils::missing_cmd_args(FLERR, "fix cluster/delete", error); }
+  if (narg < 5) { utils::missing_cmd_args(FLERR, "fix cluster/delete", error); }
 
   // Parse arguments //
 
   // Get the max size of clusters
-  kmax = utils::inumeric(FLERR, arg[4], true, lmp);
+  kmax = utils::inumeric(FLERR, arg[3], true, lmp);
   if (kmax < 2) { error->all(FLERR, "{}: kmax cannot be less than 2", style); }
 
   // Get cluster/size compute
-  compute_cluster_size = dynamic_cast<ComputeClusterSizeExt*>(lmp->modify->get_compute_by_id(arg[5]));
+  compute_cluster_size = dynamic_cast<ComputeClusterSizeExt*>(lmp->modify->get_compute_by_id(arg[4]));
   if (compute_cluster_size == nullptr) { error->all(FLERR, "{}: Cannot find compute of style 'cluster/size' with id: {}", style, arg[5]); }
   if (kmax > compute_cluster_size->get_size_cutoff()) {
     error->all(FLERR, "{}: kmax cannot be bigger than its value of compute size/cluster", style);
   }
 
   // Parse optional keywords
-  int iarg = 10;
+  int iarg = 5;
 
   while (iarg < narg) {
     if (::strcmp(arg[iarg], "noscreen") == 0) {
@@ -184,7 +184,6 @@ void FixClusterDelete::pre_exchange()
     if (cluster.g_size > kmax) {
       ++clusters2delete_local;
 #ifndef __NUCC_ALGO_CHECK
-
       std::copy(cluster.atoms().data(), cluster.atoms().offset(cluster.l_size), ids_a2m.offset(atoms2delete_local));
       atoms2delete_local += cluster.l_size;
 #else
@@ -210,9 +209,6 @@ void FixClusterDelete::pre_exchange()
   }
 
   if (atoms2delete_total > 0) { deleteAtoms(atoms2delete_total); }
-
-  bigint nblocal = atom->nlocal;
-  ::MPI_Allreduce(&nblocal, &atom->natoms, 1, MPI_LMP_BIGINT, MPI_SUM, world);
 
   if (comm->me == 0) {
     // print status
@@ -244,9 +240,7 @@ void FixClusterDelete::deleteAtoms(const int to_delete) const noexcept(true)
   atom->nlocal -= to_delete;
 
   if (atom->molecular == Atom::ATOMIC) {
-    tagint* const tag = atom->tag;
-    const int nlocal  = atom->nlocal;
-    for (int i = 0; i < nlocal; ++i) { tag[i] = 0; }
+    ::memset(atom->tag, 0, atom->nlocal * sizeof(int));
     atom->tag_extend();
   }
 

@@ -419,7 +419,6 @@ void FixClusterCrushDelete::pre_exchange()
     if (cluster.g_size > kmax) {
       ++clusters2crush_local;
 #ifndef __NUCC_ALGO_CHECK
-
       std::copy(cluster.atoms().data(), cluster.atoms().offset(cluster.l_size), ids_a2m.offset(atoms2move_local));
       atoms2move_local += cluster.l_size;
 #else
@@ -526,13 +525,13 @@ int FixClusterCrushDelete::add(const int to_insert) const
 
   // find maxid in case other fixes deleted/inserted atoms
 
-  const tagint* const tag   = atom->tag;
 
   tagint maxtag_all         = 0;
   {
     tagint max = 0;
+    const tagint* const tag   = atom->tag;
     for (int i = 0; i < atom->nlocal; ++i) { max = std::max(max, tag[i]); }
-    MPI_Allreduce(&max, &maxtag_all, 1, MPI_LMP_TAGINT, MPI_MAX, world);
+    ::MPI_Allreduce(&max, &maxtag_all, 1, MPI_LMP_TAGINT, MPI_MAX, world);
   }
 
   region->prematch();
@@ -692,7 +691,7 @@ int FixClusterCrushDelete::check_overlap(const std::array<double, 3>& coord) con
     }
   }
   int flagall = 0;
-  MPI_Allreduce(&flag, &flagall, 1, MPI_INT, MPI_MAX, world);
+  ::MPI_Allreduce(&flag, &flagall, 1, MPI_INT, MPI_MAX, world);
   return flagall;
 }
 
@@ -701,9 +700,7 @@ int FixClusterCrushDelete::check_overlap(const std::array<double, 3>& coord) con
 void FixClusterCrushDelete::postDelete() const noexcept(true)
 {
   if (atom->molecular == Atom::ATOMIC) {
-    tagint* const tag = atom->tag;
-    const int nlocal  = atom->nlocal;
-    for (int i = 0; i < nlocal; ++i) { tag[i] = 0; }
+    ::memset(atom->tag, 0, atom->nlocal * sizeof(int));
     atom->tag_extend();
   }
 

@@ -18,7 +18,6 @@ FixStyle(cluster/delete,FixClusterDelete);
 #include "fix.h"
 #include "nucc_cspan.hpp"
 
-#include <cstdint>
 #include <cstdio>
 
 namespace LAMMPS_NS {
@@ -37,9 +36,9 @@ class FixClusterDelete : public Fix {
   bigint next_step                                  = 0;          // next timestep wake up at
 
   int nloc                                          = 0;    // number of elements allocated in arrays, ~atom->nlocal
-  NUCC::cspan<int> ids_a2m;                                 // local ids of atoms to move
-  NUCC::cspan<int> count_a2m;                               // number of atoms to move per rank [comm->nprocs]
-  NUCC::cspan<int> count_c2c;                               // number of clusters to crush per rank [comm->nprocs]
+  NUCC::cspan<int> ids_a2m;                                 // local ids of atoms to delete
+  NUCC::cspan<int> count_a2m;                               // number of atoms to delete per rank [comm->nprocs]
+  NUCC::cspan<int> count_c2c;                               // number of clusters to delete per rank [comm->nprocs]
 
   // user-defined parameters
   int screenflag = 0;    // [user-defined] whether to output info to screen
