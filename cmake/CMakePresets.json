@@ -61,35 +61,90 @@
       "binaryDir": "../build"
     },
     {
-      "name": "nixfull",
-      "hidden": false,
-      "description": "local kein's configuration preset",
+      "name": "base",
+      "hidden": true,
+      "description": "Base preset preset",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_DISABLE_FIND_PACKAGE_nvpl": "ON",
         "CMAKE_CXX_STANDARD": "20",
-        "CMAKE_CXX_FLAGS": "-Ofast -std=c++20",
-        "CMAKE_C_FLAGS": "-Ofast",
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_Fortran_COMPILER": "gfortran",
-        "CMAKE_INSTALL_PREFIX": "$env{VIRTUAL_ENV}",
+        "CMAKE_C_STANDARD": "17",
         "LAMMPS_SIZES": "bigbig",
         "LAMMPS_MACHINE": "mpi",
-        "BUILD_SHARED_LIBS": "yes",
-        "CMAKE_DISABLE_FIND_PACKAGE_nvpl": "ON",
-        "BUILD_LIB": "yes",
         "BUILD_MPI": "yes",
+        "BUILD_SHARED_LIBS": "yes",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_CXX_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Wno-bitwise-instead-of-logical -Og -g",
+        "CMAKE_C_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Wno-bitwise-instead-of-logical -Og -g",
+        "CMAKE_Fortran_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Wno-bitwise-instead-of-logical -Og -g -std=f2003",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -Wno-bitwise-instead-of-logical -g -O3 -DNDEBUG",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -Wno-bitwise-instead-of-logical -g -O3 -DNDEBUG",
+        "CMAKE_Fortran_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -Wno-bitwise-instead-of-logical -g -O3 -DNDEBUG -std=f2003",
+        "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG",
+        "CMAKE_C_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG",
+        "CMAKE_Fortran_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG -std=f2003"
+      },
+      "environment": {},
+      "generator": "Unix Makefiles",
+      "binaryDir": "../build"
+    },
+    {
+      "name": "nix",
+      "hidden": true,
+      "description": "Nix base preset preset",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_Fortran_COMPILER": "gfortran"
+      }
+    },
+    {
+      "name": "nixDebug",
+      "hidden": false,
+      "description": "Nix minimal preset",
+      "inherits": "nix",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_LIB": "no",
+        "BUILD_TOOLS": "no",
+        "BUILD_LAMMPS_SHELL": "no",
+        "BUILD_LAMMPS_GUI": "no",
+        "PKG_ADIOS": "no",
+        "PKG_PYTHON": "no",
+        "PKG_COMPRESS": "no"
+      }
+    },
+    {
+      "name": "nixRelWithDebInfo",
+      "hidden": false,
+      "inherits": "nix",
+      "description": "Nix RelWithDebInfo preset",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_LIB": "yes",
         "BUILD_TOOLS": "yes",
         "BUILD_LAMMPS_SHELL": "no",
         "BUILD_LAMMPS_GUI": "no",
         "PKG_ADIOS": "yes",
         "PKG_PYTHON": "yes",
-        "PKG_COMPRESS": "yes",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
-      },
-      "environment": {},
-      "generator": "Unix Makefiles",
-      "binaryDir": "../build"
+        "PKG_COMPRESS": "yes"
+      }
+    },
+    {
+      "name": "nixRelease",
+      "hidden": false,
+      "inherits": "nix",
+      "description": "Nix Release preset",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_LIB": "yes",
+        "BUILD_TOOLS": "yes",
+        "BUILD_LAMMPS_SHELL": "no",
+        "BUILD_LAMMPS_GUI": "no",
+        "PKG_ADIOS": "yes",
+        "PKG_PYTHON": "yes",
+        "PKG_COMPRESS": "yes"
+      }
     },
     {
       "name": "cluster",
@@ -128,7 +183,9 @@
       "description": "local kein's build preset",
       "configurePreset": "minimal",
       "cleanFirst": true,
-      "targets": ["all"],
+      "targets": [
+        "all"
+      ],
       "inheritConfigureEnvironment": true,
       "jobs": 8
     },
@@ -137,14 +194,38 @@
       "description": "local kein's build preset",
       "configurePreset": "full",
       "cleanFirst": true,
-      "targets": ["all"],
+      "targets": [
+        "all"
+      ],
       "inheritConfigureEnvironment": true,
       "jobs": 8
     },
     {
-      "name": "nixfull",
+      "name": "nixDebug",
       "description": "local kein's build preset",
-      "configurePreset": "nixfull",
+      "configurePreset": "nixDebug",
+      "cleanFirst": true,
+      "targets": [
+        "all"
+      ],
+      "inheritConfigureEnvironment": true,
+      "jobs": 8
+    },
+    {
+      "name": "nixRelWithDebInfo",
+      "description": "local kein's build preset",
+      "configurePreset": "nixRelWithDebInfo",
+      "cleanFirst": true,
+      "targets": [
+        "all"
+      ],
+      "inheritConfigureEnvironment": true,
+      "jobs": 8
+    },
+    {
+      "name": "nixRelease",
+      "description": "local kein's build preset",
+      "configurePreset": "nixRelease",
       "cleanFirst": true,
       "targets": [
         "all"
@@ -157,7 +238,9 @@
       "description": "local kein's build preset",
       "configurePreset": "cluster",
       "cleanFirst": true,
-      "targets": ["all"],
+      "targets": [
+        "all"
+      ],
       "inheritConfigureEnvironment": true,
       "jobs": 16
     }
@@ -190,15 +273,41 @@
       ]
     },
     {
-      "name": "nixfull",
+      "name": "nixDebug",
       "steps": [
         {
           "type": "configure",
-          "name": "nixfull"
+          "name": "nixDebug"
         },
         {
           "type": "build",
-          "name": "nixfull"
+          "name": "nixDebug"
+        }
+      ]
+    },
+    {
+      "name": "nixRelWithDebInfo",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "nixRelWithDebInfo"
+        },
+        {
+          "type": "build",
+          "name": "nixRelWithDebInfo"
+        }
+      ]
+    },
+    {
+      "name": "nixRelease",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "nixRelease"
+        },
+        {
+          "type": "build",
+          "name": "nixRelease"
         }
       ]
     },
