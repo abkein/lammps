@@ -165,12 +165,12 @@ void FixClusterDelete::pre_exchange()
   // ids_a2m.reset();   // we don't care of freeing this array because it's overwritten from the beginning and we keep track of its actual (used) size
 
   // Count amount of local clusters to delete
-  int         clusters2delete_local = 0;
+  int clusters2delete_local = 0;
   // Count amount of local atoms to delete
-  int         atoms2delete_local    = 0;
+  int atoms2delete_local    = 0;
 
-  const int   nclusters             = compute_cluster_size->get_cluster_map().size();
-  const auto& clusters              = compute_cluster_size->get_clusters();
+  const int nclusters       = compute_cluster_size->get_cluster_map().size();
+  const auto& clusters      = compute_cluster_size->get_clusters();
   for (int i = 0; i < nclusters; ++i) {
     const auto& cluster = clusters[i];
     if (cluster.g_size > kmax) {
@@ -192,14 +192,15 @@ void FixClusterDelete::pre_exchange()
 
   // sort to delete atoms from end to lower the number of copy opretions
   std::sort(ids_a2m.data(), ids_a2m.data() + atoms2delete_local, std::greater<>());
-  if (atoms2delete_local > 0) { deleteAtoms(atoms2delete_local); }
 
   const bigint _clusters2delete_local = clusters2delete_local;
   const bigint _atoms2delete_local    = atoms2delete_local;
-  bigint       atoms2delete_total     = 0;
-  bigint       clusters2delete_total  = 0;
+  bigint atoms2delete_total           = 0;
+  bigint clusters2delete_total        = 0;
   ::MPI_Allreduce(&_atoms2delete_local, &atoms2delete_total, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   ::MPI_Allreduce(&_clusters2delete_local, &clusters2delete_total, 1, MPI_LMP_BIGINT, MPI_SUM, world);
+
+  if (atoms2delete_total > 0) { deleteAtoms(atoms2delete_local); }
 
   if (comm->me == 0) {
     // print status
@@ -252,10 +253,10 @@ void FixClusterDelete::deleteAtoms(const int to_delete) const noexcept(true)
   const auto* avec_line      = dynamic_cast<AtomVecLine*>(atom->style_match("line"));
   const auto* avec_tri       = dynamic_cast<AtomVecTri*>(atom->style_match("tri"));
   const auto* avec_body      = dynamic_cast<AtomVecBody*>(atom->style_match("body"));
-  bigint      nlocal_bonus   = 0;
+  bigint nlocal_bonus        = 0;
 
   if (atom->nellipsoids > 0) {
-  nlocal_bonus = avec_ellipsoid->nlocal_bonus;
+    nlocal_bonus = avec_ellipsoid->nlocal_bonus;
     ::MPI_Allreduce(&nlocal_bonus, &atom->nellipsoids, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   }
   if (atom->nlines > 0) {

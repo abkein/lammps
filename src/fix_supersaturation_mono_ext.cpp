@@ -403,9 +403,9 @@ void FixSupersaturationMonoExt::pre_exchange()
     const int limit     = rate_limit > 0 ? std::min(rate_limit, -balance) : -balance;
     const int to_delete = (limit / comm->nprocs) + ((comm->me == 0) ? limit % comm->nprocs : 0);
 
-    if (to_delete > 0) {
+    if (balance > 0) {
       if (nloc < to_delete) {
-        nloc = to_delete;
+        nloc = static_cast<int>(to_delete * NUCC::Defines::ALLOC_COEFF);
         ids_a2m.grow(memory, nloc, "cluster/crush/delete:ids_a2m");
       }
       // ids_a2m.reset();   // we don't care of freeing this array because it's overwritten from the beginning and we keep track of its actual (used) size
@@ -416,7 +416,7 @@ void FixSupersaturationMonoExt::pre_exchange()
       std::copy(monos + compute_cluster_size->size_local_rows - to_delete, monos + compute_cluster_size->size_local_rows, ids_a2m.data());
 
       deleteAtoms(to_delete);
-      deleted = limit;
+      deleted = to_delete;
     }
   } else {
     if (assign_temperature && (!temp_fix)) {
