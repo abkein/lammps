@@ -73,15 +73,15 @@
         "BUILD_MPI": "yes",
         "BUILD_SHARED_LIBS": "yes",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-        "CMAKE_CXX_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Wno-bitwise-instead-of-logical -Og -g",
-        "CMAKE_C_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Wno-bitwise-instead-of-logical -Og -g",
-        "CMAKE_Fortran_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Wno-bitwise-instead-of-logical -Og -g -std=f2003",
-        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -Wno-bitwise-instead-of-logical -g -O3 -DNDEBUG",
-        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -Wno-bitwise-instead-of-logical -g -O3 -DNDEBUG",
-        "CMAKE_Fortran_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -Wno-bitwise-instead-of-logical -g -O3 -DNDEBUG -std=f2003",
-        "CMAKE_CXX_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG",
-        "CMAKE_C_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG",
-        "CMAKE_Fortran_FLAGS_RELEASE": "-Ofast -march=native -DNDEBUG -std=f2003"
+        "CMAKE_CXX_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Og -g",
+        "CMAKE_C_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Og -g",
+        "CMAKE_Fortran_FLAGS_DEBUG": "-Wall -Wextra -Wpedantic -Og -g -std=f2003",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -g -O2 -DNDEBUG",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -g -O2 -DNDEBUG",
+        "CMAKE_Fortran_FLAGS_RELWITHDEBINFO": "-Wall -Wextra -g -O2 -DNDEBUG -std=f2003",
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+        "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+        "CMAKE_Fortran_FLAGS_RELEASE": "-O3 -DNDEBUG -std=f2003"
       },
       "environment": {},
       "generator": "Unix Makefiles",
@@ -93,9 +93,11 @@
       "description": "Nix base preset preset",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_Fortran_COMPILER": "gfortran"
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_Fortran_COMPILER": "gfortran",
+        "CMAKE_AR": "$env{GCC_AR_PATH}",
+        "CMAKE_RANLIB": "$env{GCC_RANLIB_PATH}"
       }
     },
     {
@@ -144,6 +146,25 @@
         "PKG_ADIOS": "yes",
         "PKG_PYTHON": "yes",
         "PKG_COMPRESS": "yes"
+      }
+    },
+    {
+      "name": "nixFast",
+      "hidden": false,
+      "inherits": "nix",
+      "description": "Nix Release preset",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_LIB": "yes",
+        "BUILD_TOOLS": "yes",
+        "BUILD_LAMMPS_SHELL": "no",
+        "BUILD_LAMMPS_GUI": "no",
+        "PKG_ADIOS": "yes",
+        "PKG_PYTHON": "yes",
+        "PKG_COMPRESS": "yes",
+        "CMAKE_CXX_FLAGS": "-ffast-math -fallow-store-data-races -fno-semantic-interposition -march=native -flto",
+        "CMAKE_C_FLAGS": "-ffast-math -fallow-store-data-races -fno-semantic-interposition -march=native -flto",
+        "CMAKE_Fortran_FLAGS": "-ffast-math -fallow-store-data-races -fno-semantic-interposition -march=native -flto -fstack-arrays -fno-protect-parens -Wno-unused-command-line-argument"
       }
     },
     {
@@ -234,6 +255,11 @@
       "jobs": 8
     },
     {
+      "name": "nixFast",
+      "configurePreset": "nixFast",
+      "inherits": "nixRelease"
+    },
+    {
       "name": "cluster",
       "description": "local kein's build preset",
       "configurePreset": "cluster",
@@ -308,6 +334,19 @@
         {
           "type": "build",
           "name": "nixRelease"
+        }
+      ]
+    },
+    {
+      "name": "nixFast",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "nixFast"
+        },
+        {
+          "type": "build",
+          "name": "nixFast"
         }
       ]
     },
