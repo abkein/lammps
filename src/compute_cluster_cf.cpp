@@ -140,7 +140,7 @@ void ComputeClusterCF::compute_local()
 
   for (int i = 0; i < size_local_rows; ++i) { ::memset(cf_local[i], 0.0, size_local_cols * sizeof(double)); }
 
-  double** const peratomcf = compute_rdf_atom->array_atom;
+  const double* const* const peratomcf = compute_rdf_atom->array_atom;
   int nclusters = compute_cluster_size->get_cluster_map().size();
   const auto& clusters = compute_cluster_size->get_clusters();
 
