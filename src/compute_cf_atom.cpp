@@ -1,4 +1,3 @@
-// clang-format off
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
    https://www.lammps.org/, Sandia National Laboratories
@@ -32,7 +31,6 @@
 
 #include <cmath>
 #include <cstring>
-#include <type_traits>
 
 using namespace LAMMPS_NS;
 using namespace MathConst;
@@ -145,21 +143,21 @@ void ComputeCFAtom::init()
   list_flags |= NeighConst::REQ_GHOST;
   neighbor->add_request(this, list_flags);
 
-  bins[0].create(memory, nbins[0], "r_bin");
-  bins[1].create(memory, nbins[1], "costheta_bin");
-  bins[2].create(memory, nbins[2], "phi_bin");
+  bins[0].grow(memory, nbins[0], "r_bin");
+  bins[1].grow(memory, nbins[1], "costheta_bin");
+  bins[2].grow(memory, nbins[2], "phi_bin");
 
   for (int i = 0; i < nbins[0]; ++i) { bins[0][i] = (i + 0.5) * sigmas[0]; }
   for (int i = 0; i < nbins[1]; ++i) { bins[1][i] = (i + 0.5) * sigmas[1] - 1; }
   for (int i = 0; i < nbins[2]; ++i) { bins[2][i] = (i + 0.5) * sigmas[2]; }
 
-  rbs.create(memory, nbins[0], "r_bin_sq");
+  rbs.grow(memory, nbins[0], "r_bin_sq");
   for (int i = 0; i < nbins[0]; ++i) { rbs[i] = 1. / (bins[0][i] * bins[0][i] * ddvol); }
 
   if (comm->me == 0) { utils::logmesg(lmp, "{}: Created: {} r, {} thata, {} phi bins\n", style, nbins[0], nbins[1], nbins[2]); }
 
-  array_atom = memory->create(rdf, static_cast<int>(atom->nmax*LMP_NUCC_ALLOC_COEFF), size_peratom_cols, "rdf");
-  memory->create(rdf, static_cast<int>(atom->nmax*LMP_NUCC_ALLOC_COEFF), size_peratom_cols, "rdf");
+  array_atom = memory->create(rdf, static_cast<int>(atom->nmax*NUCC::Defines::ALLOC_COEFF), size_peratom_cols, "rdf");
+  memory->create(rdf, static_cast<int>(atom->nmax*NUCC::Defines::ALLOC_COEFF), size_peratom_cols, "rdf");
 
   double neigh_cutoff = force->pair->cutforce  + neighbor->skin;
   double neigh_bin_vol = neigh_cutoff*neigh_cutoff*neigh_cutoff;
@@ -183,7 +181,7 @@ void ComputeCFAtom::compute_peratom()
 
   if (atom->nmax > nmax) {
     nmax = atom->nmax;
-    array_atom = memory->grow(rdf, static_cast<int>(atom->nmax*LMP_NUCC_ALLOC_COEFF), size_peratom_cols, "rdf");
+    array_atom = memory->grow(rdf, static_cast<int>(atom->nmax*NUCC::Defines::ALLOC_COEFF), size_peratom_cols, "rdf");
   }
 
   int   inum = list->inum + list->gnum;

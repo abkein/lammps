@@ -25,8 +25,6 @@
 
 using namespace LAMMPS_NS;
 
-static constexpr double EPSILON = 1.0e-6;
-
 /* ---------------------------------------------------------------------- */
 
 ComputeSupersaturationDensity::ComputeSupersaturationDensity(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
@@ -83,7 +81,7 @@ double ComputeSupersaturationDensity::compute_scalar()
   if (compute_temp->invoked_scalar != update->ntimestep) { compute_temp->compute_scalar(); }
 
   const double* const dist = compute_cluster_size->vector;
-  double sum = 0;
+  double sum               = 0;
   for (int size = 1; size <= kmax; ++size) { sum += size * dist[size]; }
 
   scalar = sum / domain->volume() / execute_func();

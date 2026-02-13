@@ -28,7 +28,7 @@ ComputeStyle(temp/cluster,ComputeClusterTemp);
 namespace LAMMPS_NS {
 class ComputeClusterTemp : public Compute {
  public:
-  ComputeClusterTemp(class LAMMPS *lmp, int narg, char **arg);
+  ComputeClusterTemp(class LAMMPS* lmp, int narg, char** arg);
   ~ComputeClusterTemp() noexcept(true) override;
   void init() override;
   void compute_vector() override;
@@ -37,7 +37,7 @@ class ComputeClusterTemp : public Compute {
 
  private:
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
-  Compute* compute_cluster_ke = nullptr;
+  Compute* compute_cluster_ke                       = nullptr;
 
   NUCC::cspan<double> temp;    // array of temps of global clusters
   int size_cutoff;             // size of max cluster

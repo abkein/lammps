@@ -82,7 +82,7 @@ void ComputeClusterTemp::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
 
-  temp.create(memory, size_vector, "temp/cluster:temp");
+  temp.grow(memory, size_vector, "temp/cluster:temp");
   vector = temp.data();
 }
 

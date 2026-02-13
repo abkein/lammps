@@ -1,24 +1,80 @@
 #ifndef NUCC_DEFS_HPP
 #define NUCC_DEFS_HPP
 
-#include <scoped_allocator>
 #include <cstddef>
-#include <unordered_map>
-#include <vector>
+#include <cstdlib>
+#include <type_traits>
+// #include <scoped_allocator>
+// #include <unordered_map>
+// #include <vector>
 
-#    define LMP_NUCC_ALLOC_COEFF 1.2
-#    define LMP_NUCC_CLUSTER_MAX_OWNERS 128
-#    define LMP_NUCC_CLUSTER_MAX_SIZE 300
-#    define LMP_NUCC_CLUSTER_MAX_GHOST 300
-
-// #define __NUCC_CSPAN_CHECK_ACCESS
-// #define __NUCC_CSPAN_DEBUG_CALLS
-// #define __NUCC_CHECK_ACCESS
-// #define __NUCC_ALGO_CHECK
-// #define __NUCC_NEIGHS_RADIAL_USE_HALF
-#define __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+#define LMP_NUCC_HDR_CSPAN_CHECK
 
 namespace NUCC {
+
+#if defined(LMP_NUCC_HDR_CSPAN_CHECK)
+
+#if defined(__clang__)
+#define DBG_NOINLINE __attribute__((noinline))
+#define DBG_OPTNONE __attribute__((optnone))
+#elif defined(__GNUC__)
+#define DBG_NOINLINE __attribute__((noinline))
+#define DBG_OPTNONE __attribute__((optimize("O0")))
+#elif defined(_MSC_VER)
+#define DBG_NOINLINE __declspec(noinline)
+#define DBG_OPTNONE
+#else
+#define DBG_NOINLINE
+#define DBG_OPTNONE
+#endif
+#else
+#define DBG_NOINLINE
+#define DBG_OPTNONE
+#endif
+
+namespace Defines {
+  inline constexpr double ALLOC_COEFF                 = 1.2;
+  inline constexpr int CLUSTER_MAX_OWNERS             = 128;
+  inline constexpr int CLUSTER_MAX_SIZE               = 300;
+  inline constexpr int CLUSTER_MAX_GHOST              = 300;
+  inline constexpr int NEIGH_BIN_CUTOFF_COEFF         = 2;
+  inline constexpr bool CHECK_ACCESS                  = true;
+  inline constexpr bool ALGO_CHECK                    = true;
+  inline constexpr bool NEIGHS_RADIAL_USE_HALF        = false;
+  inline constexpr bool NEIGHS_RADIAL_PRECOMPUTE_NORM = true;
+
+  inline constexpr bool CSPAN_CHECK_ACCESS      = true;
+  inline constexpr bool CSPAN_DEBUG_CALLS       = true;
+  inline constexpr bool ESPAN_CHECK_ACCESS      = true;
+  inline constexpr bool ESPAN_DEBUG_CALLS       = true;
+  inline constexpr bool ESPAN_CHECK_DEREFERENCE = true;
+}    // namespace Defines
+
+
+
+DBG_NOINLINE DBG_OPTNONE static void debug_trap() noexcept
+{
+#if defined(_MSC_VER)
+  __debugbreak();
+#elif defined(__clang__)
+  __builtin_debugtrap();
+#else
+  __builtin_trap();
+#endif
+  std::abort();
+}
+
+DBG_NOINLINE DBG_OPTNONE static void debug_check_index(std::size_t i, std::size_t n) noexcept
+{
+  if (i >= n) { debug_trap(); }
+}
+
+template <typename T>
+DBG_NOINLINE DBG_OPTNONE static void debug_dereference(T* ptr) noexcept
+{
+  if (ptr == nullptr) { debug_trap(); }
+}
+
 
 template <typename T>
 concept Zeroable =
@@ -37,7 +93,6 @@ T zero_value()
 {
   return nullptr;
 }
-
 
 // template <typename A>
 // using VecAlloc_t = CustomAllocator<A>;

@@ -6,22 +6,11 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <span>
 #include <type_traits>
 
 namespace NUCC {
-
-#ifdef __NUCC_CSPAN_DEBUG_CALLS
-#include <iostream>
-// dumb thing used to catch calls that are inlined by default
-struct Kallbeck {
-  __attribute_noinline__ void call() const noexcept
-  {
-    int a = 5;
-    std::cout << "dsds" << a << std::endl;
-  }
-};
-#endif
 
 template <typename T, std::size_t Extent = std::dynamic_extent>
 class cspan {
@@ -31,11 +20,14 @@ class cspan {
   cspan(const cspan<T, Extent>& other)    = delete;
   constexpr cspan(T* ptr, std::size_t n) noexcept : span_(std::span<T, Extent>(ptr, n)) {}
   constexpr cspan(T* begin, T* end) noexcept : span_(std::span<T, Extent>(begin, end)) {}
-  constexpr cspan(std::span<T, Extent>&& span) noexcept : span_(span) {}  // NOLINT(hicpp-explicit-conversions)
+  constexpr cspan(std::span<T, Extent>&& span) noexcept : span_(span) {}    // NOLINT(hicpp-explicit-conversions)
   constexpr cspan(cspan<T, Extent>&& other) noexcept : span_(std::move(other.span_)) {}
   template <typename U, std::size_t OtherExtent>
-    requires(std::is_convertible_v<U (*)[], T (*)[]>)  // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays,hicpp-avoid-c-arrays)
-  constexpr cspan(const cspan<U, OtherExtent>& other) noexcept : span_(other.data(), other.size()) {}  // NOLINT(hicpp-explicit-conversions)
+    requires(std::is_convertible_v<U (*)[], T (*)[]>)    // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays,hicpp-avoid-c-arrays)
+  constexpr cspan(const cspan<U, OtherExtent>& other) noexcept : span_(other.data(), other.size())    // NOLINT(hicpp-explicit-conversions)
+  {
+  }
+
   constexpr cspan<T, Extent>& operator=(std::span<T, Extent>&& span) noexcept
   {
     span_ = span;
@@ -47,99 +39,47 @@ class cspan {
     return *this;
   }
 
-  [[nodiscard]] constexpr T& at(std::size_t index)
-  #ifndef __NUCC_CSPAN_CHECK_ACCESS
-      noexcept
-  #endif
+  [[nodiscard]] constexpr T& at(std::size_t index) noexcept
   {
-    #ifdef __NUCC_CSPAN_CHECK_ACCESS
-    if (index >= span_.size()) {
-      #ifdef __NUCC_CSPAN_DEBUG_CALLS
-      beck.call();
-      #endif
-      throw std::out_of_range("Index out of range");
-    }
-    #endif
+    if constexpr (Defines::CSPAN_DEBUG_CALLS) { debug_check_index(index, span_.size()); }
     return span_[index];
   }
 
-  [[nodiscard]] constexpr T* offset(std::size_t offset)
-  #ifndef __NUCC_CSPAN_CHECK_ACCESS
-      noexcept
-  #endif
+  [[nodiscard]] constexpr T* offset(std::size_t offset) noexcept
   {
-    #ifdef __NUCC_CSPAN_CHECK_ACCESS
-    if (offset >= span_.size()) {
-      #ifdef __NUCC_CSPAN_DEBUG_CALLS
-      beck.call();
-      #endif
-      throw std::out_of_range("Index out of range");
-    }
-    #endif
+    if constexpr (Defines::CSPAN_DEBUG_CALLS) { debug_check_index(offset, span_.size()); }
     return span_.data() + offset;
   }
 
-  [[nodiscard]] constexpr T& operator[](std::size_t index)
-  #ifndef __NUCC_CSPAN_CHECK_ACCESS
-      noexcept
-  #endif
+  [[nodiscard]] constexpr T& operator[](std::size_t index) noexcept
   {
-    #ifdef __NUCC_CSPAN_CHECK_ACCESS
-    if (index >= span_.size()) {
-      #ifdef __NUCC_CSPAN_DEBUG_CALLS
-      beck.call();
-      #endif
-      throw std::out_of_range("Index out of range");
-    }
-    #endif
+    if constexpr (Defines::CSPAN_DEBUG_CALLS) { debug_check_index(index, span_.size()); }
     return span_[index];
   }
 
-  [[nodiscard]] constexpr const T& at(std::size_t index) const
-  #ifndef __NUCC_CSPAN_CHECK_ACCESS
-      noexcept
-  #endif
+  [[nodiscard]] constexpr const T& at(std::size_t index) const noexcept
   {
-    #ifdef __NUCC_CSPAN_CHECK_ACCESS
-    if (index >= span_.size()) {
-      #ifdef __NUCC_CSPAN_DEBUG_CALLS
-      beck.call();
-      #endif
-      throw std::out_of_range("Index out of range");
-    }
-    #endif
+    if constexpr (Defines::CSPAN_DEBUG_CALLS) { debug_check_index(index, span_.size()); }
     return span_[index];
   }
 
-  [[nodiscard]] constexpr const T* offset(std::size_t offset) const
-  #ifndef __NUCC_CSPAN_CHECK_ACCESS
-      noexcept
-  #endif
+  [[nodiscard]] constexpr const T* offset(std::size_t offset) const noexcept
   {
-    #ifdef __NUCC_CSPAN_CHECK_ACCESS
-    if (offset >= span_.size()) {
-      #ifdef __NUCC_CSPAN_DEBUG_CALLS
-      beck.call();
-      #endif
-      throw std::out_of_range("Index out of range");
-    }
-    #endif
+    if constexpr (Defines::CSPAN_DEBUG_CALLS) { debug_check_index(offset, span_.size()); }
     return span_.data() + offset;
   }
 
-  [[nodiscard]] constexpr const T& operator[](std::size_t index) const
-  #ifndef __NUCC_CSPAN_CHECK_ACCESS
-      noexcept
-  #endif
+  [[nodiscard]] constexpr const T* begin() const noexcept { return span_.data(); }
+
+  [[nodiscard]] constexpr const T* end() const noexcept { return span_.data() + span_.size(); }
+
+  [[nodiscard]] constexpr T* begin() noexcept { return span_.data(); }
+
+  [[nodiscard]] constexpr T* end() noexcept { return span_.data() + span_.size(); }
+
+  [[nodiscard]] constexpr const T& operator[](std::size_t index) const noexcept
   {
-    #ifdef __NUCC_CSPAN_CHECK_ACCESS
-    if (index >= span_.size()) {
-      #ifdef __NUCC_CSPAN_DEBUG_CALLS
-      beck.call();
-      #endif
-      throw std::out_of_range("Index out of range");
-    }
-    #endif
+    if constexpr (Defines::CSPAN_DEBUG_CALLS) { debug_check_index(index, span_.size()); }
     return span_[index];
   }
 
@@ -156,12 +96,12 @@ class cspan {
     span_ = std::span<T, Extent>();
   }
 
-  void create(LAMMPS_NS::Memory* memory, std::size_t n, const char* name)
-  {
-    T* ptr;
-    memory->create(ptr, n, name);
-    span_ = std::span<T, Extent>(ptr, n);
-  }
+  // void create(LAMMPS_NS::Memory* memory, std::size_t n, const char* name)
+  // {
+  //   T* ptr;
+  //   memory->create(ptr, n, name);
+  //   span_ = std::span<T, Extent>(ptr, n);
+  // }
 
   void grow(LAMMPS_NS::Memory* memory, std::size_t n, const char* name)
   {
@@ -201,9 +141,6 @@ class cspan {
 
  private:
   std::span<T, Extent> span_;
-#ifdef __NUCC_CSPAN_DEBUG_CALLS
-  Kallbeck beck;
-#endif
 };
 
 }    // namespace NUCC

@@ -16,13 +16,14 @@
 #include "compute_cluster_ke.h"
 #include "compute_cluster_size_ext.h"
 #include "nucc_cspan.hpp"
-#include "nucc_defs.hpp"
 
+#include "atom.h"
 #include "comm.h"
 #include "error.h"
 #include "modify.h"
 #include "update.h"
 
+#include <algorithm>
 #include <cstring>
 
 using namespace LAMMPS_NS;
@@ -89,10 +90,10 @@ void ComputeClusterKE::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
 
-  local_kes.create(memory, size_local_rows, "compute:ke/cluster:local_kes");
+  local_kes.grow(memory, size_local_rows, "compute:ke/cluster:local_kes");
   vector_local = local_kes.data();
 
-  kes.create(memory, size_vector, "compute:ke/cluster:kes");
+  kes.grow(memory, size_vector, "compute:ke/cluster:kes");
   vector = kes.data();
 }
 
@@ -133,19 +134,19 @@ void ComputeClusterKE::compute_local()
     const auto& atoms = clstr.atoms();
     if (clstr.g_size < size_cutoff) {
       for (int i = 0; i < clstr.l_size; ++i) {
-#ifdef __NUCC_ALGO_CHECK
-        if (atoms[i] > atom->nlocal) {
-          if (comm->me == 0) {
-            utils::logmesg(lmp, "Cluster: {}\n", clid);
-            utils::logmesg(lmp, "l_size: {}, g_size: {}\n", clstr.l_size, clstr.g_size);
-            utils::logmesg(lmp, "Atoms:\n");
-            for (int j = 0; j < clstr.l_size; ++j) { utils::logmesg(lmp, "{} ", atoms[j]); }
-            utils::logmesg(lmp, "\n");
-          }
-          error->one(FLERR, "{}: {}: Atom indice exceeds nlocal", style, update->ntimestep);
-        }
-#endif    // __NUCC_ALGO_CHECK
         local_kes[clstr.g_size] += peratomkes[atoms[i]];
+        if constexpr (NUCC::Defines::ALGO_CHECK) {
+          if (atoms[i] > atom->nlocal) {
+            if (comm->me == 0) {
+              utils::logmesg(lmp, "Cluster: {}\n", clstr.clid);
+              utils::logmesg(lmp, "l_size: {}, g_size: {}\n", clstr.l_size, clstr.g_size);
+              utils::logmesg(lmp, "Atoms:\n");
+              for (int j = 0; j < clstr.l_size; ++j) { utils::logmesg(lmp, "{} ", atoms[j]); }
+              utils::logmesg(lmp, "\n");
+            }
+            error->one(FLERR, "{}: {}: Atom indice exceeds nlocal", style, update->ntimestep);
+          }
+        }
       }
     }
   }

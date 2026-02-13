@@ -27,25 +27,25 @@ ComputeStyle(te/cluster,ComputeClusterTE);
 
 namespace LAMMPS_NS {
 class ComputeClusterTE : public Compute {
-public:
-  ComputeClusterTE(class LAMMPS *lmp, int narg, char **arg);
+ public:
+  ComputeClusterTE(class LAMMPS* lmp, int narg, char** arg);
   ~ComputeClusterTE() noexcept(true) override;
   void init() override;
   void compute_vector() override;
   void compute_local() override;
   double memory_usage() override;
 
-private:
+ private:
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
-  Compute* compute_cluster_pe = nullptr;
-  Compute* compute_cluster_ke = nullptr;
+  Compute* compute_cluster_pe                       = nullptr;
+  Compute* compute_cluster_ke                       = nullptr;
 
-  NUCC::cspan<double> tes;       // array of tes of global clusters
-  NUCC::cspan<double> local_tes; // array of tes of local clusters
-  int size_cutoff;               // size of max cluster
+  NUCC::cspan<double> tes;          // array of tes of global clusters
+  NUCC::cspan<double> local_tes;    // array of tes of local clusters
+  int size_cutoff;                  // size of max cluster
 };
 
-} // namespace LAMMPS_NS
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

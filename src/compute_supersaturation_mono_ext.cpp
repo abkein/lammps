@@ -34,9 +34,9 @@ using namespace LAMMPS_NS;
 ComputeSupersaturationMonoExt::ComputeSupersaturationMonoExt(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
 {
 
-  scalar_flag = 1;
-  extscalar   = 0;
-  local_flag  = 1;
+  scalar_flag     = 1;
+  extscalar       = 0;
+  local_flag      = 1;
   size_local_cols = 0;
   size_local_rows = 4;
 
@@ -102,10 +102,10 @@ double ComputeSupersaturationMonoExt::compute_scalar()
   const bigint _local_monomers = local_monomers;
   ::MPI_Allreduce(&_local_monomers, &global_monomers, 1, MPI_LMP_BIGINT, MPI_SUM, world);
 
-  const double mult = domain->volume() / execute_func();
-  scalar            = static_cast<double>(global_monomers) / mult;
+  const double mult = domain->volume() * execute_func();
   data[0]           = static_cast<double>(global_monomers);
   data[1]           = mult;
+  scalar            = static_cast<double>(global_monomers) / mult;
   return scalar;
 }
 
@@ -113,21 +113,21 @@ double ComputeSupersaturationMonoExt::compute_scalar()
 
 void ComputeSupersaturationMonoExt::compute_local()
 {
-  invoked_local = update->ntimestep;
+  invoked_local  = update->ntimestep;
 
   local_monomers = 0;
-  if (compute_cluster_size->invoked_peratom != update->ntimestep) { compute_cluster_size->compute_vector(); }
+  if (compute_cluster_size->invoked_local != update->ntimestep) { compute_cluster_size->compute_local(); }
   if (temp_avg) {
     if (compute_temp->invoked_scalar != update->ntimestep) { compute_temp->compute_scalar(); }
   } else {
     if (compute_temp->invoked_vector != update->ntimestep) { compute_temp->compute_vector(); }
   }
-  local_monomers = compute_cluster_size->size_local_rows;
+  local_monomers    = compute_cluster_size->size_local_rows;
 
-  const double mult = domain->subvolume() / execute_func();
-  local_scalar      = static_cast<double>(local_monomers) / mult;
+  const double mult = domain->subvolume() * execute_func();
   data[2]           = static_cast<double>(local_monomers);
   data[3]           = mult;
+  local_scalar      = static_cast<double>(local_monomers) / mult;
 }
 
 /* ---------------------------------------------------------------------- */

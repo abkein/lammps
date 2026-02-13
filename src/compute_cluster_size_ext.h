@@ -19,22 +19,22 @@ ComputeStyle(size/cluster/ext,ComputeClusterSizeExt);
 // clang-format on
 #else
 
-#ifndef LMP_COMPUTE_CLUSTER_SIZE_ExT_H
-#define LMP_COMPUTE_CLUSTER_SIZE_ExT_H
+#ifndef LMP_COMPUTE_CLUSTER_SIZE_EXT_H
+#define LMP_COMPUTE_CLUSTER_SIZE_EXT_H
 
 #include "compute.h"
-#include "nucc_allocator.hpp"
+// #include "nucc_allocator.hpp"
 #include "nucc_cluster_data.hpp"
 #include "nucc_cspan.hpp"
-#include "nucc_defs.hpp"
+// #include "nucc_defs.hpp"
 
 #include <unordered_map>
 #include <vector>
 
 namespace NUCC {
 struct cldata {
-  cldata() = default;
-  cldata(int id, int sz) : id(id), sz(sz) {}
+  constexpr cldata() noexcept = default;
+  constexpr cldata(int id, int sz) noexcept : id(id), sz(sz) {}
   int id = 0;
   int sz = 0;
 };
@@ -45,23 +45,23 @@ namespace LAMMPS_NS {
 class ComputeClusterSizeExt : public Compute {
  public:
   ComputeClusterSizeExt(class LAMMPS* lmp, int narg, char** arg);
-  ~ComputeClusterSizeExt() noexcept(true) override;
+  ~ComputeClusterSizeExt() noexcept override;
   void init() override;
   void compute_vector() override;
   void compute_peratom() override;
   void compute_local() override;
   double memory_usage() override;
 
-  constexpr int get_size_cutoff() const noexcept(true) { return size_cutoff; }
+  constexpr int get_size_cutoff() const noexcept { return size_cutoff; }
   constexpr NUCC::cspan<const double> get_data() const noexcept { return NUCC::cspan<const double>(dist); }
-  constexpr int get_nonexclusive() const noexcept(true) { return nonexclusive; }
-  constexpr const std::unordered_map<int, int>& get_cluster_map() const noexcept(true) { return cluster_map; }
-  //   inline constexpr const NUCC::Map_t<int, int> *get_cluster_map() const noexcept(true) { return cluster_map; }
-  constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size() const noexcept(true) { return clid_by_size; }
+  constexpr int get_nonexclusive() const noexcept { return nonexclusive; }
+  constexpr const std::unordered_map<int, int>& get_cluster_map() const noexcept { return cluster_map; }
+  //   inline constexpr const NUCC::Map_t<int, int> *get_cluster_map() const noexcept { return cluster_map; }
+  constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size() const noexcept { return clid_by_size; }
   //   inline constexpr const NUCC::Map_t<int, NUCC::Vec_t<int>> *get_cIDs_by_size_my() const noexcept { return cIDs_by_size; }
-  constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size_global() const noexcept(true) { return clid_by_size_global; }
+  constexpr const std::unordered_map<int, std::vector<int>>& get_clid_by_size_global() const noexcept { return clid_by_size_global; }
   //   inline constexpr const NUCC::Map_t<int, NUCC::Vec_t<int>> *get_cIDs_by_size() const noexcept { return cIDs_by_size_all; }
-  constexpr NUCC::cspan<const NUCC::cluster_data> get_clusters() const noexcept(true) { return NUCC::cspan<const NUCC::cluster_data>(clusters); }
+  constexpr NUCC::cspan<const NUCC::cluster_data> get_clusters() const noexcept { return NUCC::cspan<const NUCC::cluster_data>(clusters); }
 
  private:
   int size_cutoff;    // number of elements reserved in resulting distribution, i.e. the max size of cluster distribution will be built to
@@ -96,7 +96,7 @@ class ComputeClusterSizeExt : public Compute {
   int nonexclusive   = 0;    // number of clusters not owned by this proc
   int nloc_peratom   = 0;    // number of elements allocated for peratom array
 
-  int nmono          = 0;       // number of local monomers
+  int nmono          = 0;          // number of local monomers
   NUCC::cspan<double> monomers;    // int, local indices of monomers
 
   Compute* compute_cluster_atom = nullptr;

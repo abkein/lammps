@@ -31,22 +31,23 @@ class ComputeNeighsRadialBase : public Compute {
   ComputeNeighsRadialBase(LAMMPS* lmp, int narg, char** arg);
   ~ComputeNeighsRadialBase() override;
   void init() override;
-  void init_list(int, class NeighList*) override;
+  void init_list(int id, class NeighList* ptr) override;
 
-  inline constexpr const int get_nbins() const noexcept { return nbins; }
-  inline constexpr const int get_cutoff() const noexcept { return cutoff; }
-  inline constexpr const double get_delta_r() const noexcept { return delta; }
+  [[nodiscard]] constexpr int get_nbins() const noexcept { return nbins; }
+  [[nodiscard]] constexpr double get_cutoff() const noexcept { return cutoff; }
+  [[nodiscard]] constexpr double get_delta_r() const noexcept { return delta; }
 
  protected:
   int nmax              = 0;    // previous `atom->nmax`, number of rows allocated for `rdf`
   class NeighList* list = nullptr;
-  double cutoff;    // max radius compute the correlation function to; defined[user]
-  double cutsq;     // cutoff squared; computed[user]
 
-  double delta;    // width of a sigle bin, delta r; defined[user]
-  int nbins;       // number of bins; computed[user]
+  double cutoff         = 0;    // max radius compute the correlation function to; defined[user]
+  double cutsq          = 0;    // cutoff squared; computed[user]
 
-  double** rdf = nullptr;    // computed number of neighbors
+  double delta          = 0;    // width of a sigle bin, delta r; defined[user]
+  int nbins             = 0;    // number of bins; computed[user]
+
+  double** rdf          = nullptr;    // computed number of neighbors
 };
 
 }    // namespace LAMMPS_NS

@@ -28,7 +28,7 @@ ComputeStyle(ke/cluster,ComputeClusterKE);
 namespace LAMMPS_NS {
 class ComputeClusterKE : public Compute {
  public:
-  ComputeClusterKE(class LAMMPS *lmp, int narg, char **arg);
+  ComputeClusterKE(class LAMMPS* lmp, int narg, char** arg);
   ~ComputeClusterKE() noexcept(true) override;
   void init() override;
   void compute_vector() override;
@@ -36,8 +36,8 @@ class ComputeClusterKE : public Compute {
   double memory_usage() override;
 
  private:
-  class ComputeClusterSizeExt *compute_cluster_size = nullptr;
-  Compute *compute_ke_atom = nullptr;
+  class ComputeClusterSizeExt* compute_cluster_size = nullptr;
+  Compute* compute_ke_atom                          = nullptr;
 
   NUCC::cspan<double> kes;          // array of kes of global clusters
   NUCC::cspan<double> local_kes;    // array of kes of local clusters

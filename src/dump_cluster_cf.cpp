@@ -7,8 +7,8 @@
 
 // TODO: NUCC FILE
 
-#include "dump.h"
 #include "dump_cluster_cf.h"
+#include "dump.h"
 
 #include "comm.h"
 #include "compute.h"
@@ -85,9 +85,7 @@ void DumpClusterCF::write()
     for (int i = 1; i < compute_cf->size_array_rows; ++i) {
       if (dist[i] > 0) {
         fmt::print(file, "{}", i);
-        for (int j = 0; j < compute_cf->size_array_cols; ++j) {
-          fmt::print(file, DUMP_FLOAT_PRECISION, array[i][j]);
-        }
+        for (int j = 0; j < compute_cf->size_array_cols; ++j) { fmt::print(file, DUMP_FLOAT_PRECISION, array[i][j]); }
         fmt::print(file, "\n");
       }
     }

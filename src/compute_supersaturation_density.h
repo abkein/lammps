@@ -39,7 +39,7 @@ class ComputeSupersaturationDensity : public Compute {
   Compute* compute_cluster_size = nullptr;
   Compute* compute_temp         = nullptr;
 
-  std::array<double, 3> coeffs{0,0,0};
+  std::array<double, 3> coeffs{0, 0, 0};
   int kmax = 0;    // max cluster size considered a vapor
 
   [[nodiscard]] double execute_func() const;    // number density at saturation curve

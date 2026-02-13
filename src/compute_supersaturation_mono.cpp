@@ -35,9 +35,9 @@ using namespace LAMMPS_NS;
 ComputeSupersaturationMono::ComputeSupersaturationMono(LAMMPS* lmp, int narg, char** arg) : Compute(lmp, narg, arg)
 {
 
-  scalar_flag = 1;
-  extscalar   = 0;
-  local_flag  = 1;
+  scalar_flag     = 1;
+  extscalar       = 0;
+  local_flag      = 1;
   size_local_cols = 0;
   size_local_rows = 4;
 
@@ -114,7 +114,7 @@ double ComputeSupersaturationMono::compute_scalar()
   bigint _local_monomers = local_monomers;
   ::MPI_Allreduce(&_local_monomers, &global_monomers, 1, MPI_LMP_BIGINT, MPI_SUM, world);
 
-  const double mult = domain->volume() / execute_func();
+  const double mult = domain->volume() * execute_func();
   scalar            = static_cast<double>(global_monomers) / mult;
   data[0]           = static_cast<double>(global_monomers);
   data[1]           = mult;
@@ -143,15 +143,16 @@ void ComputeSupersaturationMono::compute_local()
   } else {
     if (compute_temp->invoked_vector != update->ntimestep) { compute_temp->compute_vector(); }
   }
+
+  const double* const* x = atom->x;
   for (int i = 0; i < atom->nlocal; ++i) {
-    if (((atom->mask[i] & groupbit) != 0) && (compute_neighs->vector_atom[i] == 0) &&
-        ((region->match(atom->x[i][0], atom->x[i][1], atom->x[i][2])) != 0)) {
-      ++local_monomers;
-      mono_idx[local_monomers] = i;
+    const double* const xx = x[i];
+    if (((atom->mask[i] & groupbit) != 0) && (compute_neighs->vector_atom[i] == 0) && ((region->match(xx[0], xx[1], xx[2])) != 0)) {
+      mono_idx[local_monomers++] = i;
     }
   }
 
-  const double mult = domain->subvolume() / execute_func();
+  const double mult = domain->subvolume() * execute_func();
   local_scalar      = static_cast<double>(local_monomers) / mult;
   data[2]           = static_cast<double>(local_monomers);
   data[3]           = mult;

@@ -372,11 +372,11 @@ void FixClusterCrushDelete::init()
   if (domain->dimension != 3) { error->all(FLERR, "{}: Can work only in 3D.", style); }
   if (atom->molecular != Atom::ATOMIC) { error->all(FLERR, "{}: Cannot use with molecular systems (atom deletion does not update topology)", style); }
 
-  count_a2m.create(memory, comm->nprocs, "cluster/crush/delete:count_a2m");
-  count_c2c.create(memory, comm->nprocs, "cluster/crush/delete:count_c2c");
+  count_a2m.grow(memory, comm->nprocs, "cluster/crush/delete:count_a2m");
+  count_c2c.grow(memory, comm->nprocs, "cluster/crush/delete:count_c2c");
 
   nloc = atom->nlocal;
-  ids_a2m.grow(memory, nloc, "cluster/crush/delete:ids_a2m");
+  ids_a2m.grow(memory, nloc * NUCC::Defines::ALLOC_COEFF, "cluster/crush/delete:ids_a2m");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -399,7 +399,7 @@ void FixClusterCrushDelete::pre_exchange()
   const auto& cIDs_by_size = compute_cluster_size->get_clid_by_size();
 
   if (nloc < atom->nlocal) {
-    nloc = atom->nlocal;
+    nloc = atom->nlocal * NUCC::Defines::ALLOC_COEFF;
     ids_a2m.grow(memory, nloc, "cluster/crush/delete:ids_a2m");
     ids_a2m.reset();
   }
@@ -418,16 +418,17 @@ void FixClusterCrushDelete::pre_exchange()
     const auto& cluster = clusters[i];
     if (cluster.g_size > kmax) {
       ++clusters2crush_local;
-#ifndef __NUCC_ALGO_CHECK
-      std::copy(cluster.atoms().data(), cluster.atoms().offset(cluster.l_size), ids_a2m.offset(atoms2move_local));
-      atoms2move_local += cluster.l_size;
-#else
-      const auto cluster_atoms = cluster.atoms();
-      for (int j = 0; j < cluster.l_size; ++j) {
-        if (cluster_atoms[j] >= atom->nlocal) { error->one(FLERR, "{}/pre_exchange:{}: particle index exceeds nlocal", style, comm->me); }
-        ids_a2m[atoms2move_local++] = cluster_atoms[j];
+      if constexpr (NUCC::Defines::ALGO_CHECK) {
+        const auto cluster_atoms = cluster.atoms();
+        std::copy(cluster_atoms.data(), cluster_atoms.data() + cluster.l_size, ids_a2m.offset(atoms2move_local));
+        atoms2move_local += cluster.l_size;
+      } else {
+        const auto cluster_atoms = cluster.atoms();
+        for (int j = 0; j < cluster.l_size; ++j) {
+          if (cluster_atoms[j] >= atom->nlocal) { error->one(FLERR, "{}/pre_exchange:{}: particle index exceeds nlocal", style, comm->me); }
+          ids_a2m[atoms2move_local++] = cluster_atoms[j];
+        }
       }
-#endif    // !__NUCC_ALGO_CHECK
     }
   }
 
@@ -489,11 +490,11 @@ void FixClusterCrushDelete::deleteAtoms(const int atoms2move_local) const noexce
   // reset nlocal
 
   for (int i = 0; i < atoms2move_local; i++) {
-#ifdef __NUCC_ALGO_CHECK
-    if (atom->nlocal < 0) { error->one(FLERR, "{}/deleteAtoms:{}: Negative nlocal", style, comm->me); }
-    if (ids_a2m[i] < 0) { error->one(FLERR, "{}/deleteAtoms:{}: particle index less than 0", style, comm->me); }
-    if (ids_a2m[i] >= atom->nlocal) { error->one(FLERR, "{}/deleteAtoms:{}: particle index exceeds nlocal", style, comm->me); }
-#endif    // __NUCC_ALGO_CHECK
+    if constexpr (NUCC::Defines::ALGO_CHECK) {
+      if (atom->nlocal < 0) { error->one(FLERR, "{}/deleteAtoms:{}: Negative nlocal", style, comm->me); }
+      if (ids_a2m[i] < 0) { error->one(FLERR, "{}/deleteAtoms:{}: particle index less than 0", style, comm->me); }
+      if (ids_a2m[i] >= atom->nlocal) { error->one(FLERR, "{}/deleteAtoms:{}: particle index exceeds nlocal", style, comm->me); }
+    }
     atom->avec->copy(atom->nlocal - 1 - i, ids_a2m[i], 1);
   }
   atom->nlocal -= atoms2move_local;
@@ -525,11 +526,10 @@ int FixClusterCrushDelete::add(const int to_insert) const
 
   // find maxid in case other fixes deleted/inserted atoms
 
-
   tagint maxtag_all         = 0;
   {
-    tagint max = 0;
-    const tagint* const tag   = atom->tag;
+    tagint max              = 0;
+    const tagint* const tag = atom->tag;
     for (int i = 0; i < atom->nlocal; ++i) { max = std::max(max, tag[i]); }
     ::MPI_Allreduce(&max, &maxtag_all, 1, MPI_LMP_TAGINT, MPI_MAX, world);
   }

@@ -22,7 +22,6 @@ FixStyle(supersaturation/mono/ext,FixSupersaturationMonoExt);
 #include <cstdint>
 #include <cstdio>
 
-
 namespace LAMMPS_NS {
 class FixSupersaturationMonoExt : public Fix {
  public:
@@ -51,7 +50,7 @@ class FixSupersaturationMonoExt : public Fix {
 
   // user-defined parameters
   int screenflag          = 0;       // [user-defined] whether to output info to screen
-  int fileflag            = 1;       // [user-defined] whether to output info into file
+  int fileflag            = 0;       // [user-defined] whether to output info into file
   int scaleflag           = 0;       // [user-defined]
   double overlap          = 0;       // [user-defined] minimum distance to other atoms from the place atom teleports to
   double overlapsq        = 0;       //

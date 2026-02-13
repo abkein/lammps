@@ -26,26 +26,24 @@ class FixClusterDelete : public Fix {
   FixClusterDelete(class LAMMPS* lmp, int narg, char** arg);
   ~FixClusterDelete() noexcept(true) override;
   void init() override;
-  int setmask() override;
+  int  setmask() override;
   void pre_exchange() override;
 
  protected:
   class ComputeClusterSizeExt* compute_cluster_size = nullptr;
 
-  FILE* fp                                          = nullptr;    // file write diagnostics to
-  bigint next_step                                  = 0;          // next timestep wake up at
+  FILE*                        fp                   = nullptr;    // file write diagnostics to
+  bigint                       next_step            = 0;          // next timestep wake up at
 
-  int nloc                                          = 0;    // number of elements allocated in arrays, ~atom->nlocal
-  NUCC::cspan<int> ids_a2m;                                 // local ids of atoms to delete
-  NUCC::cspan<int> count_a2m;                               // number of atoms to delete per rank [comm->nprocs]
-  NUCC::cspan<int> count_c2c;                               // number of clusters to delete per rank [comm->nprocs]
+  int                          nloc                 = 0;    // number of elements allocated in arrays, ~atom->nlocal
+  NUCC::cspan<int>             ids_a2m;                     // local ids of atoms to delete
 
   // user-defined parameters
-  int screenflag = 0;    // [user-defined] whether to output info to screen
-  int fileflag   = 1;    // [user-defined] whether to output info into file
-  int kmax       = 0;    // [user-defined] max size of clusters
+  int                          screenflag = 0;    // [user-defined] whether to output info to screen
+  int                          fileflag   = 0;    // [user-defined] whether to output info into file
+  int                          kmax       = 0;    // [user-defined] max size of clusters
 
-  void deleteAtoms(const int to_delete) const noexcept(true);
+  void                         deleteAtoms(const int to_delete) const noexcept(true);
 };
 
 }    // namespace LAMMPS_NS

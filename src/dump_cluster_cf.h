@@ -15,7 +15,7 @@
 
 #ifdef DUMP_CLASS
 // clang-format off
-DumpStyle(cf/cluster,DumpClusterCF);
+DumpStyle(cluster/cf,DumpClusterCF);
 // clang-format on
 #else
 
@@ -29,20 +29,20 @@ namespace LAMMPS_NS {
 
 class DumpClusterCF : public Dump {
  public:
-  DumpClusterCF(LAMMPS *, int, char **);
+  DumpClusterCF(LAMMPS*, int, char**);
   ~DumpClusterCF() override;
 
  protected:
   class Compute* compute_cluster_size = nullptr;
-  class Compute *compute_cf = nullptr;
+  class Compute* compute_cf           = nullptr;
 
-  FILE *file = nullptr;
+  FILE* file                          = nullptr;
 
   void init_style() override;
-  void pack(tagint *ids) override;
+  void pack(tagint* ids) override;
   void write_header(bigint ndump) override {}
   void write() override;
-  void write_data(int n, double *mybuf) override {};
+  void write_data(int n, double* mybuf) override {};
 };
 
 }    // namespace LAMMPS_NS

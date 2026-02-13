@@ -89,10 +89,10 @@ void ComputeClusterPE::init()
 {
   if ((modify->get_compute_by_style(style).size() > 1) && (comm->me == 0)) { error->warning(FLERR, "More than one compute {}", style); }
 
-  local_pes.create(memory, size_local_rows, "compute:pe/cluster:local_pes");
+  local_pes.grow(memory, size_local_rows, "compute:pe/cluster:local_pes");
   vector_local = local_pes.data();
 
-  pes.create(memory, size_vector, "compute:pe/cluster:pes");
+  pes.grow(memory, size_vector, "compute:pe/cluster:pes");
   vector = pes.data();
 }
 

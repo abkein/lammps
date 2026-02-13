@@ -29,11 +29,10 @@ namespace LAMMPS_NS {
 class ComputeNeighsRadialCluster : public ComputeNeighsRadialBase {
  public:
   ComputeNeighsRadialCluster(class LAMMPS*, int, char**);
-  void compute_peratom() override;
+  void   compute_peratom() override;
   double memory_usage() override;
 
  private:
-
   Compute* compute_cluster_atom = nullptr;
 };
 

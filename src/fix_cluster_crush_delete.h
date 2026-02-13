@@ -54,7 +54,7 @@ class FixClusterCrushDelete : public Fix {
 
   // user-defined parameters
   int screenflag          = 0;        // [user-defined] whether to output info to screen
-  int fileflag            = 1;        // [user-defined] whether to output info into file
+  int fileflag            = 0;        // [user-defined] whether to output info into file
   int scaleflag           = 0;        // [user-defined]
   int kmax                = 0;        // [user-defined] max size of clusters
   double overlap          = 0;        // [user-defined] minimum distance to other atoms from the place atom teleports to

@@ -24,7 +24,6 @@ ComputeStyle(neighs/radial/cluster/size,ComputeNeighsRadialClusterSize);
 
 #include "compute.h"
 #include "nucc_cspan.hpp"
-#include "nucc_defs.hpp"
 
 namespace LAMMPS_NS {
 
@@ -32,31 +31,31 @@ class ComputeNeighsRadialClusterSize : public Compute {
  public:
   ComputeNeighsRadialClusterSize(class LAMMPS*, int, char**);
   ~ComputeNeighsRadialClusterSize() override;
-  void init() override;
-  void compute_local() override;
-  void compute_array() override;
+  void   init() override;
+  void   compute_local() override;
+  void   compute_array() override;
   double memory_usage() override;
 
  private:
-  int do_smooth = 0;                       // whether do the smoothing or not
-  int cutoff;                              // max size; defined[internal]
-  int nbins;                               // number of bins; defined[internal]
-  double delta;                            // width of a sigle bin, delta r; defined[internal]
-  double sigma;                            // smoothing kernel width; defined[user]
-  NUCC::cspan<int> atom_counts_by_size;    // number of local atoms belonging to the size
-  double** weights       = nullptr;        // weights used for smoothing the distribution
-  double** counts        = nullptr;        // unsmoothed counts
-  double** counts2       = nullptr;        // unsmoothed counts
-  double** counts_global = nullptr;        // global counts
-  int max_neigh_bin;                       // max neighbor bin to count contribution to smoothing from
-  double norm;                             // normalization constant; computed[internal]
+  int                            do_smooth     = 0;          // whether do the smoothing or not
+  int                            cutoff        = 0;          // max size; defined[internal]
+  int                            nbins         = 0;          // number of bins; defined[internal]
+  double                         delta         = 0;          // width of a sigle bin, delta r; defined[internal]
+  double                         sigma         = 0;          // smoothing kernel width; defined[user]
+  double**                       weights       = nullptr;    // weights used for smoothing the distribution
+  double**                       counts        = nullptr;    // unsmoothed counts
+  double**                       counts2       = nullptr;    // unsmoothed counts
+  double**                       counts_global = nullptr;    // global counts
+  int                            max_neigh_bin = 0;          // max neighbor bin to count contribution to smoothing from
+  double                         norm          = 0;          // normalization constant; computed[internal]
+  NUCC::cspan<int>               atom_counts_by_size;        // number of local atoms belonging to the size
 
-  class ComputeClusterSizeExt* compute_cluster_size    = nullptr;
+  class ComputeClusterSizeExt*   compute_cluster_size  = nullptr;
   class ComputeNeighsRadialBase* compute_neighs_radial = nullptr;
 
-#ifdef __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
-  NUCC::cspan<double> norms;    // precomputed normalization constants for each bin
-#endif    // __NUCC_NEIGHS_RADIAL_PRECOMPUTE_NORM
+  // this should be made conditional
+  // for example via template, depending on NUCC::Defines::NEIGHS_RADIAL_PRECOMPUTE_NORM
+  NUCC::cspan<double>            norms;    // precomputed normalization constants for each bin
 };
 
 }    // namespace LAMMPS_NS

@@ -11,7 +11,6 @@
 #include "compute_cluster_temps.h"
 #include "fmt/core.h"
 #include "nucc_cspan.hpp"
-#include "nucc_defs.hpp"
 
 #include "atom.h"
 #include "atom_vec.h"

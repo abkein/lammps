@@ -1,5 +1,4 @@
-/*
- ----------------------------------------------------------------------
+/*----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
    https://www.lammps.org/, Sandia National Laboratories
    LAMMPS development team: developers@lammps.org
@@ -124,8 +123,6 @@ FixClusterDelete::~FixClusterDelete() noexcept(true)
     ::fflush(fp);
     ::fclose(fp);
   }
-  count_a2m.destroy(memory);
-  count_c2c.destroy(memory);
   ids_a2m.destroy(memory);
 }
 
@@ -137,11 +134,8 @@ void FixClusterDelete::init()
   if (domain->dimension != 3) { error->all(FLERR, "{}: Can work only in 3D.", style); }
   if (atom->molecular != Atom::ATOMIC) { error->all(FLERR, "{}: Cannot use with molecular systems (atom deletion does not update topology)", style); }
 
-  count_a2m.create(memory, comm->nprocs, "cluster/delete:count_a2m");
-  count_c2c.create(memory, comm->nprocs, "cluster/delete:count_c2c");
-
   nloc = atom->nlocal;
-  ids_a2m.grow(memory, nloc, "cluster/delete:ids_a2m");
+  ids_a2m.grow(memory, nloc * NUCC::Defines::ALLOC_COEFF, "cluster/delete:ids_a2m");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -161,54 +155,51 @@ void FixClusterDelete::pre_exchange()
   next_step = update->ntimestep + nevery;
 
   if (compute_cluster_size->invoked_vector != update->ntimestep) { compute_cluster_size->compute_vector(); }
-  const auto& cIDs_by_size = compute_cluster_size->get_clid_by_size();
+  // const auto& cIDs_by_size = compute_cluster_size->get_clid_by_size();
 
   if (nloc < atom->nlocal) {
-    nloc = atom->nlocal;
+    nloc = static_cast<int>(atom->nlocal * NUCC::Defines::ALLOC_COEFF);
     ids_a2m.grow(memory, nloc, "cluster/delete:ids_a2m");
-    ids_a2m.reset();
+    ids_a2m.reset();    // we don't care of freeing this array because it's overwritten from the beginning and we keep track of its actual (used) size
   }
-  count_c2c.reset();
-  count_a2m.reset();
   // ids_a2m.reset();   // we don't care of freeing this array because it's overwritten from the beginning and we keep track of its actual (used) size
 
   // Count amount of local clusters to delete
-  int clusters2delete_local = 0;
+  int         clusters2delete_local = 0;
   // Count amount of local atoms to delete
-  int atoms2delete_local    = 0;
+  int         atoms2delete_local    = 0;
 
-  const int nclusters       = compute_cluster_size->get_cluster_map().size();
-  const auto& clusters      = compute_cluster_size->get_clusters();
+  const int   nclusters             = compute_cluster_size->get_cluster_map().size();
+  const auto& clusters              = compute_cluster_size->get_clusters();
   for (int i = 0; i < nclusters; ++i) {
     const auto& cluster = clusters[i];
     if (cluster.g_size > kmax) {
       ++clusters2delete_local;
-#ifndef __NUCC_ALGO_CHECK
-      std::copy(cluster.atoms().data(), cluster.atoms().offset(cluster.l_size), ids_a2m.offset(atoms2delete_local));
-      atoms2delete_local += cluster.l_size;
-#else
-      const auto cluster_atoms = cluster.atoms();
-      for (int j = 0; j < cluster.l_size; ++j) {
-        if (cluster_atoms[j] >= atom->nlocal) { error->one(FLERR, "{}/pre_exchange:{}: particle index exceeds nlocal", style, comm->me); }
-        ids_a2m[atoms2move_local++] = cluster_atoms[j];
+      if constexpr (NUCC::Defines::ALGO_CHECK) {
+        const auto cluster_atoms = cluster.atoms();
+        for (int j = 0; j < cluster.l_size; ++j) {
+          const int atom_id = cluster_atoms[j];
+          if (atom_id >= atom->nlocal) { error->one(FLERR, "{}/pre_exchange:{}: particle index exceeds nlocal", style, comm->me); }
+          ids_a2m[atoms2delete_local++] = atom_id;
+        }
+      } else {
+        const auto cluster_atoms = cluster.atoms();
+        std::copy(cluster_atoms.data(), cluster_atoms.data() + cluster.l_size, ids_a2m.offset(atoms2delete_local));
+        atoms2delete_local += cluster.l_size;
       }
-#endif    // !__NUCC_ALGO_CHECK
     }
   }
 
   // sort to delete atoms from end to lower the number of copy opretions
   std::sort(ids_a2m.data(), ids_a2m.data() + atoms2delete_local, std::greater<>());
-  ::MPI_Allgather(&clusters2delete_local, 1, MPI_INT, count_c2c.data(), 1, MPI_INT, world);
-  ::MPI_Allgather(&atoms2delete_local, 1, MPI_INT, count_a2m.data(), 1, MPI_INT, world);
+  if (atoms2delete_local > 0) { deleteAtoms(atoms2delete_local); }
 
-  int atoms2delete_total    = 0;
-  int clusters2delete_total = 0;
-  for (int proc = 0; proc < comm->nprocs; ++proc) {
-    atoms2delete_total += count_a2m[proc];
-    clusters2delete_total += count_c2c[proc];
-  }
-
-  if (atoms2delete_total > 0) { deleteAtoms(atoms2delete_total); }
+  const bigint _clusters2delete_local = clusters2delete_local;
+  const bigint _atoms2delete_local    = atoms2delete_local;
+  bigint       atoms2delete_total     = 0;
+  bigint       clusters2delete_total  = 0;
+  ::MPI_Allreduce(&_atoms2delete_local, &atoms2delete_total, 1, MPI_LMP_BIGINT, MPI_SUM, world);
+  ::MPI_Allreduce(&_clusters2delete_local, &clusters2delete_total, 1, MPI_LMP_BIGINT, MPI_SUM, world);
 
   if (comm->me == 0) {
     // print status
@@ -230,11 +221,17 @@ void FixClusterDelete::deleteAtoms(const int to_delete) const noexcept(true)
 
   const int n_atom_local_prev = atom->nlocal;
   for (int i = 0; i < to_delete; i++) {
-#ifdef __NUCC_ALGO_CHECK
-    if (atom->nlocal < 0) { error->one(FLERR, "{}/deleteAtoms:{}: Negative nlocal", style, comm->me); }
-    if (ids_a2m[i] < 0) { error->one(FLERR, "{}/deleteAtoms:{}: particle index less than 0", style, comm->me); }
-    if (ids_a2m[i] >= atom->nlocal) { error->one(FLERR, "{}/deleteAtoms:{}: particle index exceeds nlocal", style, comm->me); }
-#endif    // __NUCC_ALGO_CHECK
+    if constexpr (NUCC::Defines::ALGO_CHECK) {
+      if (atom->nlocal < 0) { error->one(FLERR, "{}/deleteAtoms:{}: Negative nlocal", style, comm->me); }
+      if (ids_a2m[i] < 0) {
+        NUCC::debug_check_index(ids_a2m[i], atom->nlocal);
+        error->one(FLERR, "{}/deleteAtoms:{}: particle index less than 0", style, comm->me);
+      }
+      if (ids_a2m[i] >= atom->nlocal) {
+        NUCC::debug_check_index(ids_a2m[i], atom->nlocal);
+        error->one(FLERR, "{}/deleteAtoms:{}: particle index exceeds nlocal", style, comm->me);
+      }
+    }
     atom->avec->copy(n_atom_local_prev - 1 - i, ids_a2m[i], 1);
   }
   atom->nlocal -= to_delete;
@@ -255,10 +252,10 @@ void FixClusterDelete::deleteAtoms(const int to_delete) const noexcept(true)
   const auto* avec_line      = dynamic_cast<AtomVecLine*>(atom->style_match("line"));
   const auto* avec_tri       = dynamic_cast<AtomVecTri*>(atom->style_match("tri"));
   const auto* avec_body      = dynamic_cast<AtomVecBody*>(atom->style_match("body"));
-  bigint nlocal_bonus        = 0;
+  bigint      nlocal_bonus   = 0;
 
   if (atom->nellipsoids > 0) {
-    nlocal_bonus = avec_ellipsoid->nlocal_bonus;
+  nlocal_bonus = avec_ellipsoid->nlocal_bonus;
     ::MPI_Allreduce(&nlocal_bonus, &atom->nellipsoids, 1, MPI_LMP_BIGINT, MPI_SUM, world);
   }
   if (atom->nlines > 0) {
