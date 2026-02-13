@@ -100,7 +100,7 @@
             ];
             "clang-tidy.checks" = [
               "-*,boost-*,bugprone-*,concurrency-*,hicpp-*,modernize-*,performance-*,readability-*,llvm-*,misc-*,mpi-*,openmp-*"
-              "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls,-readability-isolate-declaration"
+              "-readability-magic-numbers,-readability-function-cognitive-complexity,-readability-identifier-length,-readability-math-missing-parentheses,-readability-avoid-const-params-in-decls,-readability-isolate-declaration,-readability-use-concise-preprocessor-directives"
               "-modernize-use-trailing-return-type,-modernize-return-braced-init-list"
               # hicpp-member-init is an alias for enabled cppcoreguidelines-pro-type-member-init
               # hicpp-special-member-functions is an alias for cppcoreguidelines-special-member-functions
@@ -129,6 +129,8 @@
           # clang
           llvm.clang
           llvm.clang-tools
+          llvm.flang
+          llvm.lldb
           clangTidyWrapped
 
           (python3.withPackages (
@@ -180,6 +182,8 @@
           mkdir -p '${cppcheckBuildDir}'
           cat '${cppcheckSupprPlain}' > '${cppcheckSupprPlainLoc}'
           cat '${clang-tidy-conf}' > '${clang-tidy-conf-loc}'
+
+          unset NIX_ENFORCE_NO_NATIVE
         '';
       };
     };
